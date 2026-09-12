@@ -99,7 +99,7 @@ The prior pre-Privy `permissionHash` decision gate is retired. No final authorit
 
 ## Exact repository state
 
-The repository is initialized locally on branch `main` with no remote configured. The dependency lockfile is present. The committed checkpoint is `64bb577` (`docs: record privy spike funding gate`), and the working tree is clean. The repository contains the verified T1A domain foundation, the isolated Privy spike harness, the current `evidence/privy/t3-latest.json` partial result, and synchronized documentation edits. Live Privy resource identifiers are recorded in the evidence file. `.env.local` remains ignored and no secret value is present in tracked files. No ENS writes are present.
+The repository is initialized locally on branch `main` with no remote configured. The dependency lockfile is present. The current local `HEAD` is a clean committed checkpoint, and the repository contains the verified T1A domain foundation, the isolated Privy spike harness, the current `evidence/privy/t3-latest.json` partial result, and synchronized documentation edits. Live Privy resource identifiers are recorded in the evidence file. `.env.local` remains ignored and no secret value is present in tracked files. No ENS writes are present.
 
 ## Exact next action
 

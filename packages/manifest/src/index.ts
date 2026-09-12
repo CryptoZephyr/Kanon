@@ -276,6 +276,12 @@ function assertAgentRelease(value: unknown): asserts value is AgentRelease {
   }
 }
 
+export function assertValidAgentRelease(
+  value: unknown,
+): asserts value is AgentRelease {
+  assertAgentRelease(value);
+}
+
 function assertCompanyAuthorityTerms(
   value: unknown,
 ): asserts value is CompanyAuthorityTerms {

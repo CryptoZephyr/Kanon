@@ -4,7 +4,7 @@ Canonical source: [Kanon Build in Notion](https://app.notion.com/p/3cec538183128
 
 ## Current phase
 
-Bootstrap a fresh zero-code repository, configure current sponsor documentation tooling, and complete the sponsor-independent T1A domain foundation. Privy-dependent authority logic and frontend implementation remain deferred.
+T0 setup, T1A, the Privy feasibility spike, and T1B are complete. The repository now has a verified Privy enforcement boundary and a final conservative company-authority grammar with deterministic `permissionHash`. The next phase is T2 permission diffing. ENSv2 and frontend implementation remain gated.
 
 ## Exact post-setup order
 
@@ -31,7 +31,7 @@ T1A minimal agent/domain contract
 -> T18 submission
 ```
 
-The final authority model is intentionally deferred until the Privy feasibility spike proves the real enforcement surface. T1A remains sponsor-independent and does not freeze `permissionHash` semantics.
+The final authority model was frozen only after the Privy feasibility spike. T1B excludes request-count limits, token assets, vendor resource identity, and unsupported conditions. T1A remains sponsor-independent and does not grant authority.
 
 ## Non-negotiable gates
 

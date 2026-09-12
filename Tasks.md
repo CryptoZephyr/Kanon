@@ -66,9 +66,9 @@ The owner has resolved the build-order dependency. The detailed sequence is:
 - Setup environment presence check passed for every variable required by the current T1A and Privy spike configuration.
 - `.env.local` is ignored by Git and the configured RPC responds as Ethereum Sepolia.
 - T1A is DONE locally. It defines only sponsor-independent identity, manifest, provisional terms, provisional normalized-set types, `packageHash`, and `manifestHash`.
-- Final `permissionHash` semantics and Privy-dependent authority fields are deferred until the Privy feasibility spike.
+- T1B final `permissionHash` semantics and Privy-dependent authority fields are now frozen from the completed feasibility evidence.
 - The initial Privy spike fixture is configured locally as Ethereum Sepolia, chain ID `11155111`, native ETH.
-- A live Privy owner quorum, agent signer quorum, Sepolia business wallet, and signer-specific override policy now exist for T3. Base signing, forbidden-recipient, and owner-boundary checks pass. No transaction has been broadcast and no ENS write has been made.
+- A live Privy owner quorum, agent signer quorum, Sepolia business wallet, and signer-specific override policy now exist for T3. Base signing, forbidden-recipient, owner-boundary, delegated send, receipt, revoke, and post-revoke checks pass. No ENS write has been made.
 - The separate live surface probe passes calldata function and argument restrictions, timing windows, and a rolling native-value cap. Request-count rate limiting is unsupported by the current aggregation model.
 - The current local `HEAD` is the committed checkpoint containing the surface-probe harness and evidence. No remote is configured.
 
@@ -98,21 +98,29 @@ Acceptance:
 
 ### T1B - Final company terms and deterministic permission hash
 
-Status: BLOCKED BY T3
+Status: DONE
 
-Start only after the Privy feasibility evidence defines the enforceable authority surface.
+Implemented in `packages/permissions/src/index.ts` and covered by `tests/permissions.t1b.test.ts`.
+
+- final terms use `kanon.company-authority-terms` version `2`;
+- supported rules cover Ethereum chain, native asset, exact recipient, per-transaction value, proven calldata constraints, inclusive validity windows, and rolling native-value `sum` limits;
+- canonical normalization lowercases EVM addresses, canonicalizes decimal quantities, deduplicates and sorts rules, and rejects unknown fields;
+- `permissionHash` is `sha256:` plus lowercase hexadecimal SHA-256 over canonical UTF-8 JSON of final company terms only;
+- release identity, package and manifest hashes, wallet identity, signer identity, policy IDs, aggregation IDs, and transaction IDs remain separate binding inputs;
+- token assets, request-count limits, arbitrary conditions, and ambiguous inputs fail closed;
+- the future compiler must emit only `eth_signTransaction` and `eth_sendTransaction` and reject unsupported conditions.
 
 ### T2 - Permission diff engine
 
-Status: BLOCKED BY T1B
+Status: TODO, NEXT
 
 Required classifications are `NO_CHANGE`, `NARROWER`, `EXPANDED`, `SUBSTITUTED`, and `UNKNOWN`. Expanded, substituted, and unknown authority changes must require human review.
 
 ### T3 - Real Privy wallet-control spike
 
-Status: IN PROGRESS, BLOCKING FOR T1B
+Status: DONE
 
-The spike will use a real business wallet, a narrow policy, a dedicated signer with a signer-specific override policy, a separate runner process, one allowed financial action, one clearly forbidden action, and a revoke check. It must record real wallet, policy, and signer identifiers and prove the runner has no owner-level authority. The initial test fixture is provisional Ethereum Sepolia native ETH, subject to live verification.
+The spike used a real business wallet, a narrow policy, a dedicated signer with a signer-specific override policy, a separate runner process, one allowed financial action, one clearly forbidden action, and a revoke check. It records real wallet, policy, and signer identifiers and proves the runner has no owner-level authority. The fixture is Ethereum Sepolia native ETH for this feasibility evidence.
 
 Current evidence:
 
@@ -126,7 +134,9 @@ Current evidence:
 - live timing probe allows the current window and rejects a future-only window;
 - live rolling-value aggregation allows the first 1 wei sign and rejects the subsequent 1 wei sign;
 - the current aggregation model exposes `sum` over extracted values and does not provide a request-count rate condition;
-- the wallet needs at least `0.002` Sepolia ETH before send, receipt, revoke, and post-revoke checks can run;
+- the Privy wallet was funded with `0.002` Sepolia ETH from the configured development wallet, and the funding transaction is recorded in `Handoff.md`;
+- delegated `eth_sendTransaction` succeeded with transaction hash `0x89fd33dc562cb97339cbfc6a4f3bb02cc597e9746dbb52ac3e5ad1c0e2cefe50` and receipt status `success`;
+- the owner removed the agent signer and a post-revoke delegated signing attempt was rejected with HTTP `401`;
 - the official stateful-policy concurrency caveat remains material even though the sequential rolling-value probe passed;
 - the exact feature evidence is in `evidence/privy/t3-surface-latest.json`;
 
@@ -140,4 +150,4 @@ T15 is blocked by owner design. Do not invent layout, typography, components, da
 
 ## Next action
 
-Fund `0x42D5Fb257d479187607D47C19433Be6aEEd4a9A9` with at least `0.002` Sepolia ETH, rerun `pnpm spike:privy`, and record send, receipt, revoke, and post-revoke evidence. The enforcement surface is recorded in `evidence/privy/t3-surface-latest.json`. Keep T1B blocked until the funded wallet checks pass and the unsupported rate condition is excluded from the authority grammar.
+Begin T2. Implement the permission diff engine over the final normalized authority sets. Preserve human review for `EXPANDED`, `SUBSTITUTED`, and `UNKNOWN`, and keep the Privy compiler and ENSv2 spike behind their ordered gates. Do not begin frontend work.

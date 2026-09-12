@@ -1,6 +1,6 @@
 {
-  "status": "awaiting-funding",
-  "recordedAt": "2026-09-12T13:23:34.015Z",
+  "status": "passed",
+  "recordedAt": "2026-09-12T14:18:46.312Z",
   "chain": {
     "type": "ethereum",
     "id": 11155111,
@@ -51,6 +51,26 @@
         "name": "Error",
         "status": 401,
         "message": "code=invalid_data"
+      }
+    },
+    "delegatedAllowedSend": {
+      "ok": true,
+      "mode": "send",
+      "method": "eth_sendTransaction",
+      "hash": "0x89fd33dc562cb97339cbfc6a4f3bb02cc597e9746dbb52ac3e5ad1c0e2cefe50",
+      "transactionId": "c76550cd-bc48-4fd3-830f-cb977fd8df92"
+    },
+    "receiptStatus": "success",
+    "signerCountBeforeRevoke": 1,
+    "signerCountAfterRevoke": 0,
+    "delegatedAfterRevoke": {
+      "ok": false,
+      "mode": "sign",
+      "method": "eth_signTransaction",
+      "error": {
+        "name": "Error",
+        "status": 401,
+        "message": "401 {\"error\":\"No valid authorization signatures were provided. Your payload may be malformed or your signing keys may be incorrect or expired. Docs: https://docs.privy.io/api-reference/authorization-signatures\"}"
       }
     }
   },

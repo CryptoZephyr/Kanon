@@ -18,6 +18,15 @@ import {
   type T3PolicyInput,
 } from "./feasibility.js";
 
+export type {
+  Aggregation,
+  AggregationInput,
+  Policy,
+  PolicyCondition,
+  PolicyCreateParams,
+} from "@privy-io/node/resources";
+export type PrivySdkClient = PrivyClient;
+
 const DEFAULT_ALLOWED_RECIPIENT = "0x8b88E1E1174eDC65B08de75A5439f130da8A3DFd";
 const DEFAULT_FORBIDDEN_RECIPIENT =
   "0x2222222222222222222222222222222222222222";
@@ -53,7 +62,7 @@ export interface T3Environment {
   readonly forbiddenRecipient: string;
 }
 
-interface OwnerCredentials {
+export interface OwnerCredentials {
   readonly keyQuorumId: string;
   readonly privateKey: string;
   readonly generated: boolean;
@@ -217,7 +226,7 @@ async function persistGeneratedOwnerCredentials(
   process.env.PRIVY_OWNER_KEY_QUORUM_ID = keyQuorumId;
 }
 
-async function ensureOwnerCredentials(
+export async function ensureOwnerCredentials(
   client: PrivyClient,
 ): Promise<OwnerCredentials> {
   const configuredId = process.env.PRIVY_OWNER_KEY_QUORUM_ID;
@@ -359,12 +368,13 @@ function assertRunnerOutput(value: unknown): asserts value is RunnerResult {
   }
 }
 
-async function runDelegatedRunner(input: {
+export async function runDelegatedRunner(input: {
   readonly environment: T3Environment;
   readonly walletId: string;
   readonly mode: "sign" | "send" | "update";
   readonly recipient?: string;
   readonly valueWei?: bigint;
+  readonly data?: string;
 }): Promise<RunnerResult> {
   const { spawn } = await import("node:child_process");
   const runnerPath = resolve(
@@ -395,6 +405,7 @@ async function runDelegatedRunner(input: {
     ...(input.valueWei !== undefined
       ? [`--value-wei=${input.valueWei.toString()}`]
       : []),
+    ...(input.data ? [`--data=${input.data}`] : []),
   ];
 
   return await new Promise<RunnerResult>((resolvePromise, rejectPromise) => {
@@ -456,7 +467,7 @@ function policyMatchesFixture(policy: Policy, input: T3PolicyInput): boolean {
   });
 }
 
-async function findWallet(
+export async function findWallet(
   client: PrivyClient,
   externalId: string,
 ): Promise<Wallet | undefined> {
@@ -469,7 +480,7 @@ async function findWallet(
   return undefined;
 }
 
-async function ensureT3Resources(
+export async function ensureT3Resources(
   client: PrivyClient,
   environment: T3Environment,
   owner: OwnerCredentials,

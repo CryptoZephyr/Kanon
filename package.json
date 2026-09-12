@@ -14,7 +14,8 @@
     "test": "vitest run",
     "lint": "eslint .",
     "format:check": "prettier --check .",
-    "spike:privy": "node --env-file=.env.local --import=tsx apps/runner/src/privy-feasibility-spike.ts"
+    "spike:privy": "node --env-file=.env.local --import=tsx apps/runner/src/privy-feasibility-spike.ts",
+    "spike:privy:surface": "node --env-file=.env.local --import=tsx apps/runner/src/privy-surface-probes.ts"
   },
   "devDependencies": {
     "@eslint/js": "9.35.0",

@@ -63,13 +63,14 @@ The owner has resolved the build-order dependency. The detailed sequence is:
 
 ### 2026-09-12
 
-- Setup environment presence check passed for all seven expected variables.
+- Setup environment presence check passed for every variable required by the current T1A and Privy spike configuration.
 - `.env.local` is ignored by Git and the configured RPC responds as Ethereum Sepolia.
 - T1A is DONE locally. It defines only sponsor-independent identity, manifest, provisional terms, provisional normalized-set types, `packageHash`, and `manifestHash`.
 - Final `permissionHash` semantics and Privy-dependent authority fields are deferred until the Privy feasibility spike.
 - The initial Privy spike fixture is configured locally as Ethereum Sepolia, chain ID `11155111`, native ETH.
-- A live Privy owner quorum, agent signer quorum, Sepolia business wallet, and signer-specific override policy now exist for T3. No transaction has been broadcast and no ENS write has been made.
-- The current local `HEAD` is a clean committed checkpoint on `main`. No remote is configured and the working tree is clean.
+- A live Privy owner quorum, agent signer quorum, Sepolia business wallet, and signer-specific override policy now exist for T3. Base signing, forbidden-recipient, and owner-boundary checks pass. No transaction has been broadcast and no ENS write has been made.
+- The separate live surface probe passes calldata function and argument restrictions, timing windows, and a rolling native-value cap. Request-count rate limiting is unsupported by the current aggregation model.
+- The current local `HEAD` is the committed checkpoint containing the surface-probe harness and evidence. No remote is configured.
 
 ### T1A - Minimal agent/domain contract
 
@@ -121,8 +122,13 @@ Current evidence:
 - allowed delegated signing succeeds;
 - forbidden-recipient signing is rejected with `400 policy_violation`;
 - agent owner-level wallet update is rejected with `401 invalid_data`;
+- live calldata probe allows `ping(7)` to the probe target and rejects `ping(8)` and `pong()`;
+- live timing probe allows the current window and rejects a future-only window;
+- live rolling-value aggregation allows the first 1 wei sign and rejects the subsequent 1 wei sign;
+- the current aggregation model exposes `sum` over extracted values and does not provide a request-count rate condition;
 - the wallet needs at least `0.002` Sepolia ETH before send, receipt, revoke, and post-revoke checks can run;
-- contract/function and timing are currently documented-only, while spending/rate is documented with a concurrency caveat. These are not being claimed as live-proven.
+- the official stateful-policy concurrency caveat remains material even though the sequential rolling-value probe passed;
+- the exact feature evidence is in `evidence/privy/t3-surface-latest.json`;
 
 ## Never cut
 
@@ -134,4 +140,4 @@ T15 is blocked by owner design. Do not invent layout, typography, components, da
 
 ## Next action
 
-Fund `0x42D5Fb257d479187607D47C19433Be6aEEd4a9A9` with at least `0.002` Sepolia ETH, rerun `pnpm spike:privy`, and record send, receipt, revoke, and post-revoke evidence. Keep T1B blocked until the Privy enforcement surface is recorded.
+Fund `0x42D5Fb257d479187607D47C19433Be6aEEd4a9A9` with at least `0.002` Sepolia ETH, rerun `pnpm spike:privy`, and record send, receipt, revoke, and post-revoke evidence. The enforcement surface is recorded in `evidence/privy/t3-surface-latest.json`. Keep T1B blocked until the funded wallet checks pass and the unsupported rate condition is excluded from the authority grammar.

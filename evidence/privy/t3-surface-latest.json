@@ -1,0 +1,119 @@
+{
+  "status": "passed",
+  "recordedAt": "2026-09-12T13:12:11.765Z",
+  "chain": {
+    "type": "ethereum",
+    "id": 11155111,
+    "asset": "native"
+  },
+  "resources": {
+    "ownerKeyQuorumId": "qnvqwminvphhhpjfn8d2xm1x",
+    "agentSignerKeyQuorumId": "sg2lc6vqtl2a7s2ibv7f2ca0",
+    "walletId": "daw18yxziq98ljz1t2hricvu",
+    "walletAddress": "0x42D5Fb257d479187607D47C19433Be6aEEd4a9A9",
+    "baselinePolicyId": "wrnwttls8sbespal81qv1ds9"
+  },
+  "probes": {
+    "contractFunction": {
+      "status": "passed",
+      "targetAddress": "0x0000000000000000000000000000000000000001",
+      "requiredFunction": "ping",
+      "requiredArgument": "7",
+      "allowed": {
+        "ok": true,
+        "mode": "sign",
+        "method": "eth_signTransaction",
+        "signedTransaction": true
+      },
+      "wrongArgument": {
+        "ok": false,
+        "mode": "sign",
+        "method": "eth_signTransaction",
+        "error": {
+          "name": "Error",
+          "status": 400,
+          "message": "code=policy_violation"
+        }
+      },
+      "wrongFunction": {
+        "ok": false,
+        "mode": "sign",
+        "method": "eth_signTransaction",
+        "error": {
+          "name": "Error",
+          "status": 400,
+          "message": "code=policy_violation"
+        }
+      }
+    },
+    "timing": {
+      "status": "passed",
+      "allowedWindow": {
+        "startUnix": 1789218635,
+        "endUnix": 1789218995
+      },
+      "forbiddenWindow": {
+        "startUnix": 1789222295
+      },
+      "allowed": {
+        "ok": true,
+        "mode": "sign",
+        "method": "eth_signTransaction",
+        "signedTransaction": true
+      },
+      "outsideWindow": {
+        "ok": false,
+        "mode": "sign",
+        "method": "eth_signTransaction",
+        "error": {
+          "name": "Error",
+          "status": 400,
+          "message": "code=policy_violation"
+        }
+      }
+    },
+    "spending": {
+      "status": "passed",
+      "aggregationId": "z0saxtea26k6pgca1mxy59kl",
+      "capWei": "1",
+      "windowSeconds": 3600,
+      "first": {
+        "ok": true,
+        "mode": "sign",
+        "method": "eth_signTransaction",
+        "signedTransaction": true
+      },
+      "subsequentAttempts": [
+        {
+          "ok": false,
+          "mode": "sign",
+          "method": "eth_signTransaction",
+          "error": {
+            "name": "Error",
+            "status": 400,
+            "message": "code=policy_violation"
+          }
+        }
+      ],
+      "enforcement": "observed"
+    }
+  },
+  "documentedSurface": {
+    "chainRecipientValue": "live-proven",
+    "contractFunction": "live-proven",
+    "nativeAsset": "live-proven",
+    "spending": "live-proven",
+    "requestRate": "unsupported-by-current-aggregation-model",
+    "timing": "live-proven"
+  },
+  "references": [
+    "https://docs.privy.io/controls/policies/overview",
+    "https://docs.privy.io/controls/policies/example-policies/ethereum",
+    "https://docs.privy.io/controls/policies/example-policies/timebound",
+    "https://docs.privy.io/controls/policies/stateful-policies",
+    "https://docs.privy.io/api-reference/aggregations/create",
+    "https://docs.privy.io/api-reference/aggregations/get",
+    "https://docs.privy.io/api-reference/aggregations/delete",
+    "https://docs.privy.io/api-reference/wallets/update"
+  ]
+}

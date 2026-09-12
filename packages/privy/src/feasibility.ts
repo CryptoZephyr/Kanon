@@ -3,6 +3,24 @@ import type {
   PolicyCreateParams,
   UnsignedStandardEthereumTransaction,
 } from "@privy-io/node/resources";
+import { encodeFunctionData, type Hex } from "viem";
+
+export const T3_PROBE_ABI = [
+  {
+    type: "function",
+    name: "ping",
+    inputs: [{ name: "nonce", type: "uint256" }],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "pong",
+    inputs: [],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+] as const;
 
 export interface T3PolicyInput {
   readonly ownerId: string;
@@ -91,6 +109,7 @@ export function buildT3Transaction(input: {
   readonly chainId: number;
   readonly recipient: string;
   readonly valueWei: bigint;
+  readonly data?: string;
 }): UnsignedStandardEthereumTransaction {
   if (!Number.isSafeInteger(input.chainId) || input.chainId <= 0) {
     throw new TypeError("chainId must be a positive safe integer");
@@ -100,11 +119,41 @@ export function buildT3Transaction(input: {
     throw new TypeError("recipient must be an EVM address");
   }
 
+  if (
+    input.data !== undefined &&
+    (!/^0x(?:[0-9a-fA-F]{2})*$/.test(input.data) || input.data.length === 2)
+  ) {
+    throw new TypeError("data must be an even-length hex string");
+  }
+
   return {
     chain_id: input.chainId,
     to: input.recipient,
     value: toQuantity(input.valueWei),
+    ...(input.data === undefined ? {} : { data: input.data as Hex }),
   };
+}
+
+export function buildT3ProbeCalldata(
+  functionName: "ping" | "pong",
+  nonce?: bigint,
+): Hex {
+  if (functionName === "ping") {
+    if (nonce === undefined) {
+      throw new TypeError("ping probe calldata requires a nonce");
+    }
+
+    return encodeFunctionData({
+      abi: T3_PROBE_ABI,
+      functionName: "ping",
+      args: [nonce],
+    });
+  }
+
+  return encodeFunctionData({
+    abi: T3_PROBE_ABI,
+    functionName: "pong",
+  });
 }
 
 export function expectedPolicyRejectionStatus(

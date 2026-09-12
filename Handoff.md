@@ -4,7 +4,7 @@ Canonical source: [Kanon Handoff in Notion](https://app.notion.com/p/3cac5381831
 
 ## Current state
 
-The repository is a fresh Kanon workspace. T0 setup and T1A are complete locally. The Privy feasibility spike is in progress. A live Sepolia Privy business wallet, separate owner quorum, agent signer, and signer-specific policy are configured. Allowed and forbidden signing probes pass, and the agent cannot perform an owner-level wallet update. The Privy wallet still needs testnet ETH before delegated broadcast, receipt, revoke, and post-revoke checks can run. No ENS write has been made.
+The repository is a fresh Kanon workspace. T0 setup and T1A are complete locally. The Privy feasibility spike is in progress. A live Sepolia Privy business wallet, separate owner quorum, agent signer, and signer-specific policy are configured. Allowed and forbidden signing probes pass, the agent cannot perform an owner-level wallet update, and live surface probes cover calldata function and argument restrictions, timing windows, and rolling native-value limits. The Privy wallet still needs testnet ETH before delegated broadcast, receipt, revoke, and post-revoke checks can run. No ENS write has been made.
 
 Kanon is a business agent-control runtime. Privy is the financial-authority plane. ENSv2 is the company-controlled identity and namespace plane. A manifest declares requested capability, the company defines final terms, a human approves the exact normalized authority, and the active delegated signer operates only within the verified Privy policy.
 
@@ -15,6 +15,7 @@ Kanon is a business agent-control runtime. Privy is the financial-authority plan
 - TypeScript, ESLint, Vitest, and Prettier baseline configuration.
 - Required `apps/runner`, package boundaries, and `examples/agents`.
 - `.gitignore`, `.npmrc`, and names-only `.env.example`.
+- Isolated live Privy surface probe command and safe evidence output under `evidence/privy/`.
 - Official Privy documentation MCP configuration.
 - Official Privy Agent Skill at `.claude/skills/privy/SKILL.md`.
 - Privy `llms.txt` and `skill.md` fallback references.
@@ -33,10 +34,11 @@ The official ENS machine-readable files were reachable. The Context7 MCP endpoin
 - pnpm: `11.5.0`.
 - `pnpm install --frozen-lockfile`: passed across all 7 workspace projects.
 - `pnpm typecheck`: passed.
-- `pnpm test`: passed, 3 files and 15 tests.
+- `pnpm test`: passed, 3 files and 17 tests.
 - `pnpm lint`: passed.
 - `pnpm format:check`: passed.
 - `git diff --check`: passed.
+- `pnpm spike:privy:surface`: passed all three live surface probes and restored the baseline signer policy.
 - `.env.example` contains zero nonempty assignments.
 - Local `.env.local` is ignored and `.env.example` remains trackable.
 - Repository secret-pattern scan returned zero matches.
@@ -73,9 +75,10 @@ The prior pre-Privy `permissionHash` decision gate is retired. No final authorit
 
 ## Risks and contradictions
 
-- The live Privy spike has verified business-wallet ownership, an additional signer with an override policy, allowed signing, forbidden-recipient rejection, and rejection of an agent owner-level mutation. Broadcast, receipt, revoke, and post-revoke failure remain pending funding.
+- The live Privy spike has verified business-wallet ownership, an additional signer with an override policy, allowed signing, forbidden-recipient rejection, and rejection of an agent owner-level mutation. The separate surface evidence has also verified calldata function and argument restrictions, timing windows, and a rolling native-value cap. Broadcast, receipt, revoke, and post-revoke failure remain pending funding.
 - The current Privy transaction API accepts numeric or hex `chain_id` values in the transaction payload, while policy examples express chain conditions as decimal strings. Treat this representation boundary as an adapter invariant and test it explicitly.
 - The current `@privy-io/node` package exposes an aggregations resource type but the installed SDK surface does not expose aggregation CRUD methods. Stateful spend/rate policy work may require the documented REST endpoint or a later official SDK release. This remains a vendor-interface risk.
+- The live surface probe used the documented REST aggregation endpoint because `@privy-io/node@0.34.0` has no aggregation CRUD methods. The rolling value cap passed, but the current aggregation model exposes `sum` over extracted values, so request-count rate limits remain unsupported and must not be represented as enforceable company terms.
 - The exact ENSv2 Sepolia registry, resolver, EAC, deployment, and ABI choices still require a live spike. ENS documents state that the contracts and interfaces are not final before mainnet.
 - The canonical pages previously varied in build ordering. The owner has now resolved the contradiction: T1A comes before the Privy feasibility spike, and final authority semantics come after that evidence. Local `Build.md`, `Tasks.md`, and this handoff record that decision.
 - The docs define the role of `permissionHash` but do not fix its canonical serialization, digest format, exact field inclusion, or treatment of wallet identity. Those choices are intentionally deferred to T1B.
@@ -94,13 +97,13 @@ The prior pre-Privy `permissionHash` decision gate is retired. No final authorit
 - Delegated `eth_signTransaction` inside the fixture succeeded.
 - Delegated signing to the forbidden recipient was rejected with HTTP `400` and `policy_violation`.
 - The delegated agent's wallet update attempt was rejected with HTTP `401` and `invalid_data`, demonstrating that the agent does not hold owner authorization.
-- Current feature evidence: chain, recipient, native asset, and value are live-proven. Contract/function and timing are documented by the current official API but not yet live-probed. Spending/rate is documented with the official stateful-policy concurrency caveat and has not yet been live-probed.
+- Current feature evidence: chain, recipient, native asset, and value are live-proven in `evidence/privy/t3-latest.json`. The separate `evidence/privy/t3-surface-latest.json` records live proof for contract/function and argument matching, timing windows, and a rolling native-value cap. The official stateful-policy caveat remains material because aggregation values are updated after signing and concurrent requests can race. Request-count rate limiting is unsupported by the current aggregation model.
 - No Privy transaction was broadcast, no receipt exists, and no signer revoke has been attempted because the Privy wallet balance is below the spike threshold of `0.002` Sepolia ETH.
 
 ## Exact repository state
 
-The repository is initialized locally on branch `main` with no remote configured. The dependency lockfile is present. The current local `HEAD` is a clean committed checkpoint, and the repository contains the verified T1A domain foundation, the isolated Privy spike harness, the current `evidence/privy/t3-latest.json` partial result, and synchronized documentation edits. Live Privy resource identifiers are recorded in the evidence file. `.env.local` remains ignored and no secret value is present in tracked files. No ENS writes are present.
+The repository is initialized locally on branch `main` with no remote configured. The dependency lockfile is present. The current local `HEAD` is a clean committed checkpoint after the surface-probe changes, and the repository contains the verified T1A domain foundation, the isolated Privy spike harness, `evidence/privy/t3-latest.json`, `evidence/privy/t3-surface-latest.json`, and synchronized documentation edits. Live Privy resource identifiers are recorded in the evidence files. `.env.local` remains ignored and no secret value is present in tracked files. No ENS writes are present.
 
 ## Exact next action
 
-Fund the separate Privy wallet at `0x42D5Fb257d479187607D47C19433Be6aEEd4a9A9` with at least `0.002` Sepolia ETH, then rerun `pnpm spike:privy`. Record delegated broadcast, receipt, owner-signed signer removal, post-revoke delegated failure, and the remaining contract/function, timing, and spending/rate evidence. Do not begin T1B, T2, policy compilation, ENS writes, or frontend work until the Privy evidence is sufficient.
+Fund the separate Privy wallet at `0x42D5Fb257d479187607D47C19433Be6aEEd4a9A9` with at least `0.002` Sepolia ETH, then rerun `pnpm spike:privy`. Record delegated broadcast, receipt, owner-signed signer removal, and post-revoke delegated failure. The contract/function, timing, and rolling-value evidence is already in `evidence/privy/t3-surface-latest.json`. Do not begin T1B, T2, policy compilation, ENS writes, or frontend work until the Privy evidence is sufficient.

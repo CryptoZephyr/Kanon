@@ -15,6 +15,7 @@ interface RunnerOptions {
   readonly chainId: number;
   readonly recipient?: string;
   readonly valueWei?: bigint;
+  readonly data?: string;
 }
 
 function parseArguments(argumentsList: readonly string[]): RunnerOptions {
@@ -45,11 +46,12 @@ function parseArguments(argumentsList: readonly string[]): RunnerOptions {
   const recipient = values.get("recipient");
   const rawValueWei = values.get("value-wei");
   const valueWei = rawValueWei === undefined ? undefined : BigInt(rawValueWei);
+  const data = values.get("data");
   if (mode !== "update" && (!recipient || valueWei === undefined)) {
     throw new Error("transaction runner modes require recipient and value-wei");
   }
 
-  return { mode, walletId, chainId, recipient, valueWei };
+  return { mode, walletId, chainId, recipient, valueWei, data };
 }
 
 function errorStatus(error: unknown): number | undefined {
@@ -125,6 +127,7 @@ async function execute(options: RunnerOptions): Promise<RunnerResult> {
     chainId: options.chainId,
     recipient: options.recipient as string,
     valueWei: options.valueWei as bigint,
+    data: options.data,
   });
 
   if (options.mode === "sign") {

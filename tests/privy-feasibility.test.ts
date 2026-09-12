@@ -1,6 +1,7 @@
 import {
   buildT3PolicyBody,
   buildT3Transaction,
+  buildT3ProbeCalldata,
   deriveAuthorizationPublicKey,
   expectedDelegationRejectionStatus,
   expectedPolicyRejectionStatus,
@@ -71,6 +72,41 @@ describe("Privy feasibility spike helpers", () => {
       to: input.recipient,
       value: "0x1",
     });
+
+    expect(
+      buildT3Transaction({
+        chainId: input.chainId,
+        recipient: input.recipient,
+        valueWei: input.maxValueWei,
+        data: "0x1234",
+      }),
+    ).toEqual({
+      chain_id: 11155111,
+      to: input.recipient,
+      value: "0x1",
+      data: "0x1234",
+    });
+  });
+
+  it("encodes distinct calldata for the function probe", () => {
+    const allowed = buildT3ProbeCalldata("ping", 7n);
+    const wrongArgument = buildT3ProbeCalldata("ping", 8n);
+    const wrongFunction = buildT3ProbeCalldata("pong");
+
+    expect(allowed).toMatch(/^0x[0-9a-f]+$/);
+    expect(wrongArgument).not.toBe(allowed);
+    expect(wrongFunction).not.toBe(allowed);
+  });
+
+  it("rejects malformed transaction calldata", () => {
+    expect(() =>
+      buildT3Transaction({
+        chainId: input.chainId,
+        recipient: input.recipient,
+        valueWei: input.maxValueWei,
+        data: "0x1",
+      }),
+    ).toThrow(/even-length hex/);
   });
 
   it("recognizes only HTTP statuses used for a policy rejection", () => {

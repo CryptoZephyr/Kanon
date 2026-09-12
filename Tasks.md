@@ -70,7 +70,7 @@ The owner has resolved the build-order dependency. The detailed sequence is:
 - The initial Privy spike fixture is configured locally as Ethereum Sepolia, chain ID `11155111`, native ETH.
 - A live Privy owner quorum, agent signer quorum, Sepolia business wallet, and signer-specific override policy now exist for T3. Base signing, forbidden-recipient, owner-boundary, delegated send, receipt, revoke, and post-revoke checks pass. No ENS write has been made.
 - The separate live surface probe passes calldata function and argument restrictions, timing windows, and a rolling native-value cap. Request-count rate limiting is unsupported by the current aggregation model.
-- The current local `HEAD` is clean commit `d315ef9`, containing the T1A foundation, T3 evidence, final T1B authority model, and synchronized documentation. No remote is configured.
+- The current local `HEAD` is a clean T1B checkpoint containing the T1A foundation, T3 evidence, final T1B authority model, and synchronized documentation. No remote is configured.
 
 ### T1A - Minimal agent/domain contract
 

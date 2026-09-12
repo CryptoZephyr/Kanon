@@ -117,7 +117,7 @@ The prior pre-Privy `permissionHash` decision gate is retired. No final authorit
 
 ## Exact repository state
 
-The repository is initialized locally on branch `main` with no remote configured. The dependency lockfile is present. The current local `HEAD` is the clean T1B checkpoint `d315ef9`, and the repository contains the verified T1A domain foundation, the final T1B authority model, the isolated Privy spike harness, `evidence/privy/t3-latest.json`, `evidence/privy/t3-surface-latest.json`, and synchronized documentation edits. Live Privy resource identifiers are recorded in the evidence files. `.env.local` remains ignored and no secret value is present in tracked files. No ENS writes are present.
+The repository is initialized locally on branch `main` with no remote configured. The dependency lockfile is present. The current local `HEAD` is the clean T1B checkpoint after final verification, and the repository contains the verified T1A domain foundation, the final T1B authority model, the isolated Privy spike harness, `evidence/privy/t3-latest.json`, `evidence/privy/t3-surface-latest.json`, and synchronized documentation edits. Live Privy resource identifiers are recorded in the evidence files. `.env.local` remains ignored and no secret value is present in tracked files. No ENS writes are present.
 
 ## Exact next action
 

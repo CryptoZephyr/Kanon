@@ -4,7 +4,7 @@ Canonical source: [Kanon Build in Notion](https://app.notion.com/p/3cec538183128
 
 ## Current phase
 
-T0 setup, T1A, the Privy feasibility spike, and T1B are complete. The repository now has a verified Privy enforcement boundary and a final conservative company-authority grammar with deterministic `permissionHash`. The next phase is T2 permission diffing. ENSv2 and frontend implementation remain gated.
+T0 setup, T1A, the Privy feasibility spike, T1B, and T2 are complete. The repository now has a verified Privy enforcement boundary, a final conservative company-authority grammar with deterministic `permissionHash`, and a proof-backed permission diff engine. The next phase is the Privy policy compiler. ENSv2 and frontend implementation remain gated.
 
 ## Exact post-setup order
 
@@ -31,7 +31,7 @@ T1A minimal agent/domain contract
 -> T18 submission
 ```
 
-The final authority model was frozen only after the Privy feasibility spike. T1B excludes request-count limits, token assets, vendor resource identity, and unsupported conditions. T1A remains sponsor-independent and does not grant authority.
+The final authority model was frozen only after the Privy feasibility spike. T1B excludes request-count limits, token assets, vendor resource identity, and unsupported conditions. T2 returns `UNKNOWN` for any authority relationship it cannot prove. T1A remains sponsor-independent and does not grant authority.
 
 ## Non-negotiable gates
 

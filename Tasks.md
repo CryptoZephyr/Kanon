@@ -70,7 +70,7 @@ The owner has resolved the build-order dependency. The detailed sequence is:
 - The initial Privy spike fixture is configured locally as Ethereum Sepolia, chain ID `11155111`, native ETH.
 - A live Privy owner quorum, agent signer quorum, Sepolia business wallet, and signer-specific override policy now exist for T3. Base signing, forbidden-recipient, owner-boundary, delegated send, receipt, revoke, and post-revoke checks pass. No ENS write has been made.
 - The separate live surface probe passes calldata function and argument restrictions, timing windows, and a rolling native-value cap. Request-count rate limiting is unsupported by the current aggregation model.
-- The current local `HEAD` is a clean T1B checkpoint containing the T1A foundation, T3 evidence, final T1B authority model, and synchronized documentation. No remote is configured.
+- The current local `HEAD` is a clean T2 checkpoint containing the T1A foundation, T3 evidence, final T1B authority model, the permission diff engine, and synchronized documentation. No remote is configured.
 
 ### T1A - Minimal agent/domain contract
 
@@ -112,9 +112,17 @@ Implemented in `packages/permissions/src/index.ts` and covered by `tests/permiss
 
 ### T2 - Permission diff engine
 
-Status: TODO, NEXT
+Status: DONE
 
-Required classifications are `NO_CHANGE`, `NARROWER`, `EXPANDED`, `SUBSTITUTED`, and `UNKNOWN`. Expanded, substituted, and unknown authority changes must require human review.
+Implemented in `packages/permissions/src/index.ts` and covered by `tests/permissions.t1b.test.ts`.
+
+- `NO_CHANGE` requires identical normalized company terms, regardless of release-only identity changes;
+- `NARROWER` requires every next rule to be provably covered by a previous rule, with no reverse coverage;
+- `EXPANDED` requires the reverse coverage relationship, with no next-to-previous coverage;
+- `SUBSTITUTED` requires equal rule counts, equal limit signatures, and changed scope fields such as chain, recipient, calldata, or validity window;
+- `UNKNOWN` is returned for forged permission hashes, invalid normalized sets, mixed or incomparable limits, and every relationship that cannot be proven;
+- `EXPANDED`, `SUBSTITUTED`, and `UNKNOWN` require human review. `NARROWER` and `NO_CHANGE` do not.
+- The result includes both permission hashes and deterministic changed paths for review evidence.
 
 ### T3 - Real Privy wallet-control spike
 
@@ -140,6 +148,16 @@ Current evidence:
 - the official stateful-policy concurrency caveat remains material even though the sequential rolling-value probe passed;
 - the exact feature evidence is in `evidence/privy/t3-surface-latest.json`;
 
+### T5 - Privy policy compiler
+
+Status: TODO, NEXT
+
+- compile only the final `CompanyAuthorityTerms` grammar into Privy policy conditions;
+- attach signer-specific overrides without granting owner-level authority;
+- use stateful aggregation only for selected rolling-value limits;
+- reject token assets, request-count limits, arbitrary conditions, ambiguous ABI inputs, and every unsupported field;
+- fail closed when a policy cannot faithfully represent the normalized permission set.
+
 ## Never cut
 
 Deterministic authority hashing, human approval, real Privy wallet control, restricted delegated signer behavior, real ENSv2 identity and permission evidence, isolated runner execution, allowed and forbidden action proof, update escalation blocking, real revoke, ENS revoked state, and post-revoke failure.
@@ -150,4 +168,4 @@ T15 is blocked by owner design. Do not invent layout, typography, components, da
 
 ## Next action
 
-Begin T2. Implement the permission diff engine over the final normalized authority sets. Preserve human review for `EXPANDED`, `SUBSTITUTED`, and `UNKNOWN`, and keep the Privy compiler and ENSv2 spike behind their ordered gates. Do not begin frontend work.
+Begin T5. Implement the Privy policy compiler against the final authority grammar and T2 diff contract. It must reject unsupported conditions and never emit broader authority than the normalized permission set. Keep the ENSv2 spike and frontend work behind their ordered gates.

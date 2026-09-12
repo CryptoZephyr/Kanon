@@ -4,7 +4,7 @@ Canonical source: [Kanon Handoff in Notion](https://app.notion.com/p/3cac5381831
 
 ## Current state
 
-The repository is a fresh Kanon workspace. T0 setup, T1A, the Privy feasibility spike, and T1B are complete locally. A live Sepolia Privy business wallet, separate owner quorum, agent signer, and signer-specific policy are configured. Allowed and forbidden signing probes pass, the agent cannot perform an owner-level wallet update, live surface probes cover calldata function and argument restrictions, timing windows, and rolling native-value limits, and the funded delegated send, receipt, revoke, and post-revoke checks pass. T1B now freezes a conservative authority grammar and deterministic `permissionHash` from that evidence. No ENS write has been made.
+The repository is a fresh Kanon workspace. T0 setup, T1A, the Privy feasibility spike, T1B, and T2 are complete locally. A live Sepolia Privy business wallet, separate owner quorum, agent signer, and signer-specific policy are configured. Allowed and forbidden signing probes pass, the agent cannot perform an owner-level wallet update, live surface probes cover calldata function and argument restrictions, timing windows, and rolling native-value limits, and the funded delegated send, receipt, revoke, and post-revoke checks pass. T1B freezes a conservative authority grammar and deterministic `permissionHash` from that evidence. T2 now classifies authority changes with proof-backed coverage and fail-closed uncertainty. No ENS write has been made.
 
 Kanon is a business agent-control runtime. Privy is the financial-authority plane. ENSv2 is the company-controlled identity and namespace plane. A manifest declares requested capability, the company defines final terms, a human approves the exact normalized authority, and the active delegated signer operates only within the verified Privy policy.
 
@@ -17,6 +17,7 @@ Kanon is a business agent-control runtime. Privy is the financial-authority plan
 - `.gitignore`, `.npmrc`, and names-only `.env.example`.
 - Isolated live Privy surface probe command and safe evidence output under `evidence/privy/`.
 - Final T1B authority normalization and deterministic `permissionHash` implementation under `packages/permissions/`.
+- T2 permission diff engine with deterministic classifications and changed-path evidence under `packages/permissions/`.
 - Official Privy documentation MCP configuration.
 - Official Privy Agent Skill at `.claude/skills/privy/SKILL.md`.
 - Privy `llms.txt` and `skill.md` fallback references.
@@ -42,6 +43,7 @@ The official ENS machine-readable files were reachable. The Context7 MCP endpoin
 - `pnpm spike:privy:surface`: passed all three live surface probes and restored the baseline signer policy.
 - `pnpm spike:privy`: passed delegated signing, forbidden-action rejection, delegated send, receipt confirmation, signer revoke, and post-revoke rejection.
 - T1B tests: passed authority normalization, stable serialization, hash separation, and fail-closed unsupported-condition checks.
+- T2 tests: passed all five classifications, human-review flags, changed paths, and forged-set fail-closed behavior.
 - `.env.example` contains zero nonempty assignments.
 - Local `.env.local` is ignored and `.env.example` remains trackable.
 - Repository secret-pattern scan returned zero matches.
@@ -88,6 +90,7 @@ The prior pre-Privy `permissionHash` decision gate is retired. No final authorit
 - The permission hash excludes agent/release/package/manifest identity and Privy wallet, signer, policy, quorum, aggregation, and transaction identifiers. Those values are bound separately by the installation and approval records, so unchanged authority can remain unchanged across a software release.
 - The final authority grammar is deliberately limited to Ethereum transaction rules with a positive chain ID, native ETH, one exact recipient, a per-transaction value ceiling, optional proven calldata function and exact named-argument constraints, optional inclusive Unix validity boundaries, and optional rolling native-value `sum` limits.
 - ERC-20 or other token assets, request-count limits, arbitrary conditions, ambiguous ABI inputs, and unknown fields fail closed. Rolling-value aggregation remains subject to Privy's documented concurrency caveat.
+- T2 treats any relationship it cannot prove from normalized rules as `UNKNOWN`. This includes mixed rolling-limit direction, malformed sets, and future authority fields not covered by the current grammar.
 - The architecture names `apps/api` and a later web surface, while the required initial structure contains only `apps/runner` and the five packages. API and frontend work remain deferred as instructed.
 - The live Notion pages report `unverified` page status. Their content was fetched as the current project source, but that metadata is not an independent approval signal.
 
@@ -115,10 +118,18 @@ The prior pre-Privy `permissionHash` decision gate is retired. No final authorit
 - `NormalizedPermissionSet` carries the stable release source separately and includes the derived `permissionHash`.
 - The future Privy compiler must accept a normalized permission set plus owner ID and policy label, emit only the two verified execution methods, and reject every field or condition outside this grammar. It must never widen, approximate, or replace Privy enforcement with an application-only check.
 
+## T2 permission diff record
+
+- `NO_CHANGE` requires identical normalized company terms and does not require human review for release-only identity changes.
+- `NARROWER` and `EXPANDED` use proof-backed rule coverage. Rolling-value coverage requires the next maximum to be no greater and its window to be no shorter for a narrower result.
+- `SUBSTITUTED` requires equal rule counts and matching limit signatures with changed scope fields such as chain, recipient, calldata, or validity window.
+- `UNKNOWN` is fail-closed for forged permission hashes, invalid normalized sets, incomparable constraints, and any relationship outside the proven comparison rules.
+- The diff result carries both permission hashes and deterministic changed paths. `EXPANDED`, `SUBSTITUTED`, and `UNKNOWN` require human review.
+
 ## Exact repository state
 
-The repository is initialized locally on branch `main` with no remote configured. The dependency lockfile is present. The current local `HEAD` is the clean T1B checkpoint after final verification, and the repository contains the verified T1A domain foundation, the final T1B authority model, the isolated Privy spike harness, `evidence/privy/t3-latest.json`, `evidence/privy/t3-surface-latest.json`, and synchronized documentation edits. Live Privy resource identifiers are recorded in the evidence files. `.env.local` remains ignored and no secret value is present in tracked files. No ENS writes are present.
+The repository is initialized locally on branch `main` with no remote configured. The dependency lockfile is present. The current local `HEAD` is the clean T2 checkpoint after final verification, and the repository contains the verified T1A domain foundation, the final T1B authority model, the T2 permission diff engine, the isolated Privy spike harness, `evidence/privy/t3-latest.json`, `evidence/privy/t3-surface-latest.json`, and synchronized documentation edits. Live Privy resource identifiers are recorded in the evidence files. `.env.local` remains ignored and no secret value is present in tracked files. No ENS writes are present.
 
 ## Exact next action
 
-Begin T2. Implement the permission diff engine over the final normalized authority sets. Preserve human review for `EXPANDED`, `SUBSTITUTED`, and `UNKNOWN`, and keep the Privy compiler and ENSv2 spike behind their ordered gates. Do not begin frontend work.
+Begin T5. Implement the Privy policy compiler against the final authority grammar and T2 diff contract. It must reject unsupported conditions and never emit broader authority than the normalized permission set. Keep the ENSv2 spike and frontend work behind their ordered gates. Do not begin frontend work.

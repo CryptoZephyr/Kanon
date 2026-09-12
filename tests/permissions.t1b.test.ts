@@ -3,6 +3,7 @@ import {
   UnsupportedAuthorityError,
   createCompanyAuthorityTerms,
   createNormalizedPermissionSet,
+  diffPermissionSets,
   serializeCompanyAuthorityTerms,
 } from "../packages/permissions/src/index.js";
 import { createAgentRelease } from "../packages/manifest/src/index.js";
@@ -21,6 +22,16 @@ function release(input: {
     packageContent: input.content,
     runtime: { entry: "worker" },
     capabilities: { chains: [11155111], assets: ["native"] },
+  });
+}
+
+function permissionSet(
+  companyTerms: Parameters<typeof createCompanyAuthorityTerms>[0],
+  releaseId = "release-a",
+) {
+  return createNormalizedPermissionSet({
+    release: release({ releaseId, content: releaseId }),
+    companyTerms: createCompanyAuthorityTerms(companyTerms),
   });
 }
 
@@ -220,5 +231,207 @@ describe("T1B final authority model", () => {
       "eth_signTransaction",
       "eth_sendTransaction",
     ]);
+  });
+
+  it("classifies unchanged authority without reviewing a release-only change", () => {
+    const previous = permissionSet({
+      rules: [
+        {
+          chainId: 11155111,
+          asset: "native",
+          recipient: RECIPIENT,
+          maxValueWei: "10",
+        },
+      ],
+    });
+    const next = permissionSet(
+      {
+        rules: [
+          {
+            chainId: 11155111,
+            asset: "native",
+            recipient: RECIPIENT.toLowerCase(),
+            maxValueWei: 10n,
+          },
+        ],
+      },
+      "release-b",
+    );
+
+    expect(diffPermissionSets(previous, next)).toEqual({
+      classification: "NO_CHANGE",
+      requiresHumanReview: false,
+      previousPermissionHash: previous.permissionHash,
+      nextPermissionHash: next.permissionHash,
+      changedPaths: [],
+    });
+  });
+
+  it("classifies a strictly reduced rule as narrower", () => {
+    const previous = permissionSet({
+      rules: [
+        {
+          chainId: 11155111,
+          asset: "native",
+          recipient: RECIPIENT,
+          maxValueWei: "10",
+        },
+      ],
+    });
+    const next = permissionSet({
+      rules: [
+        {
+          chainId: 11155111,
+          asset: "native",
+          recipient: RECIPIENT,
+          maxValueWei: "5",
+          validityWindow: { notBeforeUnix: 100, notAfterUnix: 200 },
+        },
+      ],
+    });
+
+    const diff = diffPermissionSets(previous, next);
+    expect(diff.classification).toBe("NARROWER");
+    expect(diff.requiresHumanReview).toBe(false);
+    expect(diff.changedPaths).toEqual([
+      "companyTerms.authority.rules[0].maxValueWei",
+      "companyTerms.authority.rules[0].validityWindow",
+    ]);
+  });
+
+  it("classifies added scope and widened limits as expanded", () => {
+    const previous = permissionSet({
+      rules: [
+        {
+          chainId: 11155111,
+          asset: "native",
+          recipient: RECIPIENT,
+          maxValueWei: "5",
+          calldata: {
+            function: {
+              name: "ping",
+              inputs: [{ name: "nonce", type: "uint256" }],
+            },
+            exactArguments: { nonce: "7" },
+          },
+          validityWindow: { notBeforeUnix: 100, notAfterUnix: 200 },
+        },
+      ],
+    });
+    const next = permissionSet({
+      rules: [
+        {
+          chainId: 11155111,
+          asset: "native",
+          recipient: RECIPIENT,
+          maxValueWei: "10",
+        },
+        {
+          chainId: 11155111,
+          asset: "native",
+          recipient: "0x0000000000000000000000000000000000000001",
+          maxValueWei: "1",
+        },
+      ],
+    });
+
+    const diff = diffPermissionSets(previous, next);
+    expect(diff.classification).toBe("EXPANDED");
+    expect(diff.requiresHumanReview).toBe(true);
+    expect(diff.changedPaths).toContain("companyTerms.authority.rules[1]");
+  });
+
+  it("classifies a same-limit scope replacement as substituted", () => {
+    const previous = permissionSet({
+      rules: [
+        {
+          chainId: 11155111,
+          asset: "native",
+          recipient: RECIPIENT,
+          maxValueWei: "1",
+          calldata: {
+            function: {
+              name: "ping",
+              inputs: [{ name: "nonce", type: "uint256" }],
+            },
+            exactArguments: { nonce: "7" },
+          },
+        },
+      ],
+    });
+    const next = permissionSet({
+      rules: [
+        {
+          chainId: 11155111,
+          asset: "native",
+          recipient: "0x0000000000000000000000000000000000000001",
+          maxValueWei: "1",
+          calldata: {
+            function: {
+              name: "pong",
+              inputs: [{ name: "nonce", type: "uint256" }],
+            },
+            exactArguments: { nonce: "7" },
+          },
+        },
+      ],
+    });
+
+    const diff = diffPermissionSets(previous, next);
+    expect(diff.classification).toBe("SUBSTITUTED");
+    expect(diff.requiresHumanReview).toBe(true);
+  });
+
+  it("classifies incomparable rolling limits as unknown and requires review", () => {
+    const previous = permissionSet({
+      rules: [
+        {
+          chainId: 11155111,
+          asset: "native",
+          recipient: RECIPIENT,
+          maxValueWei: "10",
+          rollingSpend: { maxValueWei: "10", windowSeconds: 60 },
+        },
+      ],
+    });
+    const next = permissionSet({
+      rules: [
+        {
+          chainId: 11155111,
+          asset: "native",
+          recipient: RECIPIENT,
+          maxValueWei: "10",
+          rollingSpend: { maxValueWei: "20", windowSeconds: 120 },
+        },
+      ],
+    });
+
+    const diff = diffPermissionSets(previous, next);
+    expect(diff.classification).toBe("UNKNOWN");
+    expect(diff.requiresHumanReview).toBe(true);
+    expect(diff.reason).toMatch(/could not prove/);
+  });
+
+  it("fails closed when a normalized permission hash is forged", () => {
+    const previous = permissionSet({
+      rules: [
+        {
+          chainId: 11155111,
+          asset: "native",
+          recipient: RECIPIENT,
+          maxValueWei: "1",
+        },
+      ],
+    });
+    const forged = {
+      ...previous,
+      permissionHash:
+        "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    } as never;
+
+    const diff = diffPermissionSets(previous, forged);
+    expect(diff.classification).toBe("UNKNOWN");
+    expect(diff.requiresHumanReview).toBe(true);
+    expect(diff.changedPaths).toEqual(["permissionSet"]);
   });
 });

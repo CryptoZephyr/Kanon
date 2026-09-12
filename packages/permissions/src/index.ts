@@ -116,7 +116,9 @@ type UnknownRecord = Record<string, unknown>;
 const ADDRESS_PATTERN = /^0x[0-9a-fA-F]{40}$/;
 const IDENTIFIER_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
 const ABI_TYPE_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*(?:[0-9]+)?(?:\[[0-9]*\])*$/;
-const PERMISSION_HASH_PATTERN = /^sha256:[0-9a-f]{64}$/;
+const SHA256_HASH_PATTERN = /^sha256:[0-9a-f]{64}$/;
+const PERMISSION_HASH_PATTERN = SHA256_HASH_PATTERN;
+const CONTENT_HASH_PATTERN = SHA256_HASH_PATTERN;
 
 function isPlainRecord(value: unknown): value is UnknownRecord {
   if (value === null || typeof value !== "object" || Array.isArray(value)) {
@@ -539,4 +541,367 @@ export function createNormalizedPermissionSet(input: {
     companyTerms,
     permissionHash: hashCompanyAuthorityTerms(companyTerms),
   });
+}
+
+export type PermissionChangeClassification =
+  | "NO_CHANGE"
+  | "NARROWER"
+  | "EXPANDED"
+  | "SUBSTITUTED"
+  | "UNKNOWN";
+
+export interface PermissionDiff {
+  readonly classification: PermissionChangeClassification;
+  readonly requiresHumanReview: boolean;
+  readonly previousPermissionHash: string;
+  readonly nextPermissionHash: string;
+  readonly changedPaths: readonly string[];
+  readonly reason?: string;
+}
+
+interface ValidatedPermissionSet {
+  readonly terms: CompanyAuthorityTerms;
+  readonly permissionHash: PermissionHash;
+}
+
+function stableIdentifier(value: unknown, field: string): string {
+  if (
+    typeof value !== "string" ||
+    value.length === 0 ||
+    value.trim() !== value
+  ) {
+    throw new TypeError(`${field} must be a non-blank stable identifier`);
+  }
+
+  if (/\s/.test(value)) {
+    throw new TypeError(`${field} must not contain whitespace`);
+  }
+
+  return value;
+}
+
+function validateNormalizedPermissionSet(
+  value: unknown,
+  field: string,
+): ValidatedPermissionSet {
+  const record = assertPlainRecord(value, field);
+  assertExactKeys(
+    record,
+    ["schema", "version", "source", "companyTerms", "permissionHash"],
+    field,
+  );
+  assertRequiredKeys(
+    record,
+    ["schema", "version", "source", "companyTerms", "permissionHash"],
+    field,
+  );
+  if (
+    record.schema !== "kanon.normalized-permission-set" ||
+    record.version !== 2
+  ) {
+    throw new TypeError(`${field} must be a final normalized permission set`);
+  }
+
+  const source = assertPlainRecord(record.source, `${field}.source`);
+  assertExactKeys(
+    source,
+    ["agentId", "releaseId", "manifestHash"],
+    `${field}.source`,
+  );
+  assertRequiredKeys(
+    source,
+    ["agentId", "releaseId", "manifestHash"],
+    `${field}.source`,
+  );
+  stableIdentifier(source.agentId, `${field}.source.agentId`);
+  stableIdentifier(source.releaseId, `${field}.source.releaseId`);
+  if (
+    typeof source.manifestHash !== "string" ||
+    !CONTENT_HASH_PATTERN.test(source.manifestHash)
+  ) {
+    throw new TypeError(`${field}.source.manifestHash must be a sha256 hash`);
+  }
+  if (
+    typeof record.permissionHash !== "string" ||
+    !PERMISSION_HASH_PATTERN.test(record.permissionHash)
+  ) {
+    throw new TypeError(`${field}.permissionHash must be a permission hash`);
+  }
+
+  const terms = normalizeFinalTerms(record.companyTerms);
+  const computedPermissionHash = hashCompanyAuthorityTerms(terms);
+  if (computedPermissionHash !== record.permissionHash) {
+    throw new TypeError(`${field}.permissionHash does not match companyTerms`);
+  }
+
+  return {
+    terms,
+    permissionHash: computedPermissionHash,
+  };
+}
+
+function quantity(value: DecimalQuantity): bigint {
+  return BigInt(value);
+}
+
+function sameValue<T>(first: T, second: T): boolean {
+  if (first === undefined || second === undefined) {
+    return first === second;
+  }
+  return canonicalJson(first) === canonicalJson(second);
+}
+
+function calldataIsSubset(
+  candidate: CalldataConstraint | undefined,
+  baseline: CalldataConstraint | undefined,
+): boolean {
+  if (baseline === undefined) {
+    return true;
+  }
+  if (candidate === undefined) {
+    return false;
+  }
+  if (!sameValue(candidate.function, baseline.function)) {
+    return false;
+  }
+
+  for (const [name, value] of Object.entries(baseline.exactArguments)) {
+    if (candidate.exactArguments[name] !== value) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function validityIsSubset(
+  candidate: ValidityWindow | undefined,
+  baseline: ValidityWindow | undefined,
+): boolean {
+  const candidateStart = candidate?.notBeforeUnix ?? Number.NEGATIVE_INFINITY;
+  const candidateEnd = candidate?.notAfterUnix ?? Number.POSITIVE_INFINITY;
+  const baselineStart = baseline?.notBeforeUnix ?? Number.NEGATIVE_INFINITY;
+  const baselineEnd = baseline?.notAfterUnix ?? Number.POSITIVE_INFINITY;
+  return candidateStart >= baselineStart && candidateEnd <= baselineEnd;
+}
+
+function rollingSpendIsSubset(
+  candidate: RollingSpendLimit | undefined,
+  baseline: RollingSpendLimit | undefined,
+): boolean {
+  if (baseline === undefined) {
+    return true;
+  }
+  if (candidate === undefined) {
+    return false;
+  }
+
+  return (
+    quantity(candidate.maxValueWei) <= quantity(baseline.maxValueWei) &&
+    candidate.windowSeconds >= baseline.windowSeconds
+  );
+}
+
+function ruleIsSubset(
+  candidate: CompanyAuthorityRule,
+  baseline: CompanyAuthorityRule,
+): boolean {
+  return (
+    candidate.chainId === baseline.chainId &&
+    candidate.asset === baseline.asset &&
+    candidate.recipient === baseline.recipient &&
+    quantity(candidate.maxValueWei) <= quantity(baseline.maxValueWei) &&
+    calldataIsSubset(candidate.calldata, baseline.calldata) &&
+    validityIsSubset(candidate.validityWindow, baseline.validityWindow) &&
+    rollingSpendIsSubset(candidate.rollingSpend, baseline.rollingSpend)
+  );
+}
+
+function authorityIsSubset(
+  candidate: CompanyAuthorityTerms,
+  baseline: CompanyAuthorityTerms,
+): boolean {
+  return candidate.authority.rules.every((candidateRule) =>
+    baseline.authority.rules.some((baselineRule) =>
+      ruleIsSubset(candidateRule, baselineRule),
+    ),
+  );
+}
+
+function ruleLimitsEqual(
+  first: CompanyAuthorityRule,
+  second: CompanyAuthorityRule,
+): boolean {
+  return (
+    first.asset === second.asset &&
+    first.maxValueWei === second.maxValueWei &&
+    sameValue(first.rollingSpend, second.rollingSpend)
+  );
+}
+
+function ruleScopeEqual(
+  first: CompanyAuthorityRule,
+  second: CompanyAuthorityRule,
+): boolean {
+  return (
+    first.chainId === second.chainId &&
+    first.recipient === second.recipient &&
+    sameValue(first.calldata, second.calldata) &&
+    sameValue(first.validityWindow, second.validityWindow)
+  );
+}
+
+function isSubstitution(
+  previous: CompanyAuthorityTerms,
+  next: CompanyAuthorityTerms,
+): boolean {
+  if (
+    previous.authority.rules.length !== next.authority.rules.length ||
+    previous.authority.rules.length === 0
+  ) {
+    return false;
+  }
+
+  const remaining = [...previous.authority.rules];
+  let changed = false;
+  for (const nextRule of next.authority.rules) {
+    const matchIndex = remaining.findIndex((previousRule) =>
+      ruleLimitsEqual(previousRule, nextRule),
+    );
+    if (matchIndex < 0) {
+      return false;
+    }
+    const [previousRule] = remaining.splice(matchIndex, 1);
+    if (!ruleScopeEqual(previousRule, nextRule)) {
+      changed = true;
+    }
+  }
+
+  return changed && remaining.length === 0;
+}
+
+function changedPaths(
+  before: unknown,
+  after: unknown,
+  path: string,
+  output: string[],
+): void {
+  if (sameValue(before, after)) {
+    return;
+  }
+  if (Array.isArray(before) && Array.isArray(after)) {
+    const length = Math.max(before.length, after.length);
+    for (let index = 0; index < length; index += 1) {
+      changedPaths(before[index], after[index], `${path}[${index}]`, output);
+    }
+    return;
+  }
+  if (isPlainRecord(before) && isPlainRecord(after)) {
+    const keys = new Set([...Object.keys(before), ...Object.keys(after)]);
+    for (const key of [...keys].sort()) {
+      changedPaths(before[key], after[key], `${path}.${key}`, output);
+    }
+    return;
+  }
+
+  output.push(path);
+}
+
+function unknownDiff(
+  previous: NormalizedPermissionSet,
+  next: NormalizedPermissionSet,
+  reason: string,
+): PermissionDiff {
+  return {
+    classification: "UNKNOWN",
+    requiresHumanReview: true,
+    previousPermissionHash:
+      typeof previous?.permissionHash === "string"
+        ? previous.permissionHash
+        : "",
+    nextPermissionHash:
+      typeof next?.permissionHash === "string" ? next.permissionHash : "",
+    changedPaths: ["permissionSet"],
+    reason,
+  };
+}
+
+export function diffPermissionSets(
+  previous: NormalizedPermissionSet,
+  next: NormalizedPermissionSet,
+): PermissionDiff {
+  let previousValidated: ValidatedPermissionSet;
+  let nextValidated: ValidatedPermissionSet;
+  try {
+    previousValidated = validateNormalizedPermissionSet(
+      previous,
+      "previousPermissionSet",
+    );
+    nextValidated = validateNormalizedPermissionSet(next, "nextPermissionSet");
+  } catch (error) {
+    return unknownDiff(
+      previous,
+      next,
+      error instanceof Error
+        ? error.message
+        : "permission set validation failed",
+    );
+  }
+
+  const changedPathList: string[] = [];
+  changedPaths(
+    previousValidated.terms,
+    nextValidated.terms,
+    "companyTerms",
+    changedPathList,
+  );
+
+  if (sameValue(previousValidated.terms, nextValidated.terms)) {
+    return {
+      classification: "NO_CHANGE",
+      requiresHumanReview: false,
+      previousPermissionHash: previousValidated.permissionHash,
+      nextPermissionHash: nextValidated.permissionHash,
+      changedPaths: [],
+    };
+  }
+
+  const nextIsSubset = authorityIsSubset(
+    nextValidated.terms,
+    previousValidated.terms,
+  );
+  const previousIsSubset = authorityIsSubset(
+    previousValidated.terms,
+    nextValidated.terms,
+  );
+
+  let classification: PermissionChangeClassification;
+  let reason: string | undefined;
+  if (nextIsSubset && !previousIsSubset) {
+    classification = "NARROWER";
+  } else if (previousIsSubset && !nextIsSubset) {
+    classification = "EXPANDED";
+  } else if (
+    !nextIsSubset &&
+    !previousIsSubset &&
+    isSubstitution(previousValidated.terms, nextValidated.terms)
+  ) {
+    classification = "SUBSTITUTED";
+  } else {
+    classification = "UNKNOWN";
+    reason =
+      "could not prove a monotonic or one-to-one substitution relationship";
+  }
+
+  return {
+    classification,
+    requiresHumanReview:
+      classification === "EXPANDED" ||
+      classification === "SUBSTITUTED" ||
+      classification === "UNKNOWN",
+    previousPermissionHash: previousValidated.permissionHash,
+    nextPermissionHash: nextValidated.permissionHash,
+    changedPaths: changedPathList,
+    ...(reason === undefined ? {} : { reason }),
+  };
 }

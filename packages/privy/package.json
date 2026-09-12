@@ -2,5 +2,9 @@
   "name": "@kanon/privy",
   "version": "0.0.0",
   "private": true,
-  "type": "module"
+  "type": "module",
+  "dependencies": {
+    "@privy-io/node": "0.34.0",
+    "viem": "2.56.3"
+  }
 }

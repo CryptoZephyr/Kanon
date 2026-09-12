@@ -1,0 +1,65 @@
+{
+  "status": "awaiting-funding",
+  "recordedAt": "2026-09-12T12:37:01.338Z",
+  "chain": {
+    "type": "ethereum",
+    "id": 11155111,
+    "asset": "native"
+  },
+  "resources": {
+    "ownerKeyQuorumId": "qnvqwminvphhhpjfn8d2xm1x",
+    "agentSignerKeyQuorumId": "sg2lc6vqtl2a7s2ibv7f2ca0",
+    "walletId": "daw18yxziq98ljz1t2hricvu",
+    "walletAddress": "0x42D5Fb257d479187607D47C19433Be6aEEd4a9A9",
+    "policyId": "wrnwttls8sbespal81qv1ds9"
+  },
+  "policyFixture": {
+    "methods": ["eth_signTransaction", "eth_sendTransaction"],
+    "fields": ["chain_id", "to", "value"],
+    "maxValueWei": "1",
+    "recipient": "0x8b88E1E1174eDC65B08de75A5439f130da8A3DFd"
+  },
+  "checks": {
+    "delegatedAllowedSigning": {
+      "ok": true,
+      "mode": "sign",
+      "method": "eth_signTransaction",
+      "signedTransaction": true
+    },
+    "delegatedForbiddenSigning": {
+      "ok": false,
+      "mode": "sign",
+      "method": "eth_signTransaction",
+      "error": {
+        "name": "Error",
+        "status": 400,
+        "message": "code=policy_violation"
+      }
+    },
+    "agentOwnerOperation": {
+      "ok": false,
+      "mode": "update",
+      "method": "PATCH /v1/wallets/{wallet_id}",
+      "error": {
+        "name": "Error",
+        "status": 401,
+        "message": "code=invalid_data"
+      }
+    }
+  },
+  "documentedSurface": {
+    "chainRecipientValue": "live-proven",
+    "contractFunction": "documented",
+    "nativeAsset": "live-proven",
+    "spendingRate": "documented-with-caveat",
+    "timing": "documented"
+  },
+  "references": [
+    "https://docs.privy.io/controls/policies/overview",
+    "https://docs.privy.io/controls/policies/example-policies/ethereum",
+    "https://docs.privy.io/controls/policies/stateful-policies",
+    "https://docs.privy.io/controls/authorization-keys/using-owners/overview",
+    "https://docs.privy.io/api-reference/wallets/update",
+    "https://docs.privy.io/api-reference/wallets/ethereum/eth-send-transaction"
+  ]
+}

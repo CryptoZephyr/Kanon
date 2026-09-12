@@ -9,5 +9,5 @@
     "forceConsistentCasingInFileNames": true,
     "types": ["node", "vitest/globals"]
   },
-  "include": ["tests/**/*.ts"]
+  "include": ["apps/**/*.ts", "packages/**/*.ts", "tests/**/*.ts"]
 }

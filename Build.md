@@ -4,17 +4,17 @@ Canonical source: [Kanon Build in Notion](https://app.notion.com/p/3cec538183128
 
 ## Current phase
 
-Bootstrap a fresh zero-code repository and configure current sponsor documentation tooling. Product logic and frontend implementation are deferred.
+Bootstrap a fresh zero-code repository, configure current sponsor documentation tooling, and complete the sponsor-independent T1A domain foundation. Privy-dependent authority logic and frontend implementation remain deferred.
 
 ## Exact post-setup order
 
-The owner instruction and the detailed task IDs define the next sequence as T1 and T2 first, then the blocking sponsor proofs and lifecycle work:
+The owner has resolved the dependency ordering. The next sequence is T1A, the Privy feasibility spike, T1B, then the remaining implementation gates:
 
 ```text
-T1 manifest + company terms + permissionHash
+T1A minimal agent/domain contract
+-> T3 Privy feasibility spike and forbidden-action proof
+-> T1B final company terms + permissionHash
 -> T2 permission diff
--> T3 Privy wallet-control spike
--> T4 forbidden-action proof
 -> T5 Privy policy compiler
 -> T6 ENSv2 identity spike
 -> T7 ENS adapter + approved-state binding
@@ -31,7 +31,7 @@ T1 manifest + company terms + permissionHash
 -> T18 submission
 ```
 
-The Notion build-priority summary places the Privy and ENSv2 feasibility spikes before the permission model. That ordering differs from the detailed task IDs and owner instruction. The difference is recorded in `Handoff.md` and must be resolved explicitly before it affects implementation.
+The final authority model is intentionally deferred until the Privy feasibility spike proves the real enforcement surface. T1A remains sponsor-independent and does not freeze `permissionHash` semantics.
 
 ## Non-negotiable gates
 

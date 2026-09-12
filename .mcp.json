@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "privy-docs": {
+      "url": "https://docs.privy.io/mcp"
+    },
+    "context7": {
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "Authorization": "Bearer ${CONTEXT7_API_KEY}"
+      }
+    }
+  }
+}

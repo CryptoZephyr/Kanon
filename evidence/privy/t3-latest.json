@@ -1,6 +1,6 @@
 {
   "status": "awaiting-funding",
-  "recordedAt": "2026-09-12T13:09:54.694Z",
+  "recordedAt": "2026-09-12T13:20:43.224Z",
   "chain": {
     "type": "ethereum",
     "id": 11155111,
@@ -14,8 +14,15 @@
     "policyId": "wrnwttls8sbespal81qv1ds9"
   },
   "policyFixture": {
-    "methods": ["eth_signTransaction", "eth_sendTransaction"],
-    "fields": ["chain_id", "to", "value"],
+    "methods": [
+      "eth_signTransaction",
+      "eth_sendTransaction"
+    ],
+    "fields": [
+      "chain_id",
+      "to",
+      "value"
+    ],
     "maxValueWei": "1",
     "recipient": "0x8b88E1E1174eDC65B08de75A5439f130da8A3DFd"
   },

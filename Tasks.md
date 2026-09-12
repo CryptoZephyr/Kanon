@@ -69,6 +69,7 @@ The owner has resolved the build-order dependency. The detailed sequence is:
 - Final `permissionHash` semantics and Privy-dependent authority fields are deferred until the Privy feasibility spike.
 - The initial Privy spike fixture is configured locally as Ethereum Sepolia, chain ID `11155111`, native ETH.
 - A live Privy owner quorum, agent signer quorum, Sepolia business wallet, and signer-specific override policy now exist for T3. No transaction has been broadcast and no ENS write has been made.
+- The exact committed checkpoint is `89e7363` (`feat: add t1a domain and privy spike`) on local `main`. No remote is configured and the working tree is clean.
 
 ### T1A - Minimal agent/domain contract
 

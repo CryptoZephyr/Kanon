@@ -71,7 +71,7 @@ The official ENS machine-readable files were reachable. The Context7 MCP endpoin
 - Local `.env.local` is ignored and `.env.example` remains trackable.
 - Repository secret-pattern scan returned zero matches.
 - GitHub CLI verified the private repository and local/remote commit parity.
-- Render deployment `dep-daj1ag8jo6nc73c13gmg` for the API and `dep-daj1ag8jo6nc73c13geg` for the runner reached `live` on the free plan.
+- Render proof deployments `dep-daj1ag8jo6nc73c13gmg` for the API and `dep-daj1ag8jo6nc73c13geg` for the runner reached `live` on the free plan. The stable current identifiers are the service IDs recorded above.
 - `https://kanon-api.onrender.com/healthz` returned API and Neon database `ok`.
 - `https://kanon-runner.onrender.com/healthz` returned runner and Neon database `ok`.
 - The public API rejected an unauthenticated proof start with HTTP `401` and accepted a company-authenticated start with HTTP `202`.

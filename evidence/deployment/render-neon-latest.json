@@ -19,14 +19,14 @@
     "api": {
       "serviceId": "srv-daj103tg1s2s7391ov3g",
       "url": "https://kanon-api.onrender.com",
-      "deploymentId": "dep-daj1ag8jo6nc73c13gmg",
+      "proofDeploymentId": "dep-daj1ag8jo6nc73c13gmg",
       "health": "ok",
       "database": "ok"
     },
     "runner": {
       "serviceId": "srv-daj102fqj5pc73bs02r0",
       "url": "https://kanon-runner.onrender.com",
-      "deploymentId": "dep-daj1ag8jo6nc73c13geg",
+      "proofDeploymentId": "dep-daj1ag8jo6nc73c13geg",
       "health": "ok",
       "database": "ok"
     },

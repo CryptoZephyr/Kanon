@@ -7,6 +7,7 @@
     "url": "https://github.com/CryptoZephyr/Kanon",
     "visibility": "private",
     "proofCommit": "40b6d88c1f32601c7a5c62b7cfb0ea7e00ecb90a",
+    "currentCommit": "d5a4c780f8cb68261dcc06bce4b13750233fdeab",
     "frontendTouched": false
   },
   "render": {
@@ -18,14 +19,14 @@
     "api": {
       "serviceId": "srv-daj103tg1s2s7391ov3g",
       "url": "https://kanon-api.onrender.com",
-      "deploymentId": "dep-daj104lg1s2s7391p0i0",
+      "deploymentId": "dep-daj1ag8jo6nc73c13gmg",
       "health": "ok",
       "database": "ok"
     },
     "runner": {
       "serviceId": "srv-daj102fqj5pc73bs02r0",
       "url": "https://kanon-runner.onrender.com",
-      "deploymentId": "dep-daj1037qj5pc73bs04q0",
+      "deploymentId": "dep-daj1ag8jo6nc73c13geg",
       "health": "ok",
       "database": "ok"
     },

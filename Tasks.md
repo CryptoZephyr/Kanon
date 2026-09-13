@@ -240,8 +240,8 @@ The owner directed this deployment before the documented T15 frontend-design gat
 
 - GitHub repository `https://github.com/CryptoZephyr/Kanon` is private and was created and pushed with GitHub CLI.
 - Neon free project `kanon-ethonline-2026` uses PostgreSQL 18 in `aws-eu-central-1`, database `kanon`, branch `br-spring-block-b2xd3rlk`. The existing migration passed.
-- Render free service `kanon-api` is live at `https://kanon-api.onrender.com`, service ID `srv-daj103tg1s2s7391ov3g`, deployment `dep-daj104lg1s2s7391p0i0`.
-- Render free service `kanon-runner` is live at `https://kanon-runner.onrender.com`, service ID `srv-daj102fqj5pc73bs02r0`, deployment `dep-daj1037qj5pc73bs04q0`.
+- Render free service `kanon-api` is live at `https://kanon-api.onrender.com`, service ID `srv-daj103tg1s2s7391ov3g`, deployment `dep-daj1ag8jo6nc73c13gmg`.
+- Render free service `kanon-runner` is live at `https://kanon-runner.onrender.com`, service ID `srv-daj102fqj5pc73bs02r0`, deployment `dep-daj1ag8jo6nc73c13geg`.
 - Both services use Node.js `22.23.2`, pnpm `11.5.0`, one free instance in Frankfurt, and reach Neon successfully through TLS.
 - The runner is public because of the Render free-service topology. Its internal endpoint requires the application shared secret. Owner and ENS control credentials remain API-only, and the runner receives delegated execution material only.
 - The API rejected an unauthenticated proof start with HTTP `401` and accepted a company-authenticated start with HTTP `202`.

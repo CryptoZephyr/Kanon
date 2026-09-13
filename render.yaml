@@ -1,14 +1,14 @@
 services:
   - name: kanon-runner
     type: web
-    runtime: docker
+    runtime: node
     repo: https://github.com/CryptoZephyr/Kanon
     branch: main
     region: frankfurt
     plan: free
     numInstances: 1
-    dockerfilePath: ./Dockerfile.runner
-    dockerContext: .
+    buildCommand: corepack enable && corepack prepare pnpm@11.5.0 --activate && pnpm install --frozen-lockfile
+    startCommand: pnpm exec tsx apps/runner/src/server.ts
     healthCheckPath: /healthz
     autoDeployTrigger: commit
     envVars:
@@ -37,14 +37,14 @@ services:
 
   - name: kanon-api
     type: web
-    runtime: docker
+    runtime: node
     repo: https://github.com/CryptoZephyr/Kanon
     branch: main
     region: frankfurt
     plan: free
     numInstances: 1
-    dockerfilePath: ./Dockerfile.api
-    dockerContext: .
+    buildCommand: corepack enable && corepack prepare pnpm@11.5.0 --activate && pnpm install --frozen-lockfile
+    startCommand: pnpm exec tsx apps/api/src/server.ts
     healthCheckPath: /healthz
     autoDeployTrigger: commit
     envVars:

@@ -1,0 +1,118 @@
+{
+  "schema": "kanon.deployment-proof",
+  "version": 1,
+  "recordedAt": "2026-09-13T03:05:41.061Z",
+  "cost": "free",
+  "repository": {
+    "url": "https://github.com/CryptoZephyr/Kanon",
+    "visibility": "private",
+    "proofCommit": "40b6d88c1f32601c7a5c62b7cfb0ea7e00ecb90a",
+    "frontendTouched": false
+  },
+  "render": {
+    "region": "frankfurt",
+    "plan": "free",
+    "runtime": "node",
+    "nodeVersion": "22.23.2",
+    "pnpmVersion": "11.5.0",
+    "api": {
+      "serviceId": "srv-daj103tg1s2s7391ov3g",
+      "url": "https://kanon-api.onrender.com",
+      "deploymentId": "dep-daj104lg1s2s7391p0i0",
+      "health": "ok",
+      "database": "ok"
+    },
+    "runner": {
+      "serviceId": "srv-daj102fqj5pc73bs02r0",
+      "url": "https://kanon-runner.onrender.com",
+      "deploymentId": "dep-daj1037qj5pc73bs04q0",
+      "health": "ok",
+      "database": "ok"
+    },
+    "authentication": {
+      "unauthorizedProofStartHttpStatus": 401,
+      "authorizedProofStartHttpStatus": 202
+    },
+    "topology": {
+      "runnerIsPublicHttps": true,
+      "applicationSharedSecret": true,
+      "ownerAndEnsCredentialsInRunner": false,
+      "agentAuthorizationPrivateKeyInApi": false
+    }
+  },
+  "neon": {
+    "projectId": "wandering-thunder-13577687",
+    "projectName": "kanon-ethonline-2026",
+    "region": "aws-eu-central-1",
+    "postgresVersion": "18",
+    "database": "kanon",
+    "databaseId": 245941,
+    "branchId": "br-spring-block-b2xd3rlk",
+    "branchState": "ready",
+    "migration": "passed",
+    "ssl": "required"
+  },
+  "ens": {
+    "network": "Ethereum Sepolia",
+    "chainId": 11155111,
+    "organization": "kanon-ethonline-2026.eth",
+    "namespace": "agents.kanon-ethonline-2026.eth",
+    "agentName": "representative-agent.agents.kanon-ethonline-2026.eth",
+    "controlWallet": "0x8b88E1E1174eDC65B08de75A5439f130da8A3DFd",
+    "resolver": "0x0D4560DaFEb04Cf022472B5085070A05E0d77e0B",
+    "t6Evidence": "evidence/ens/t6-write-latest.json",
+    "t7Evidence": "evidence/ens/t7-adapter-latest.json",
+    "terminalStatus": "revoked"
+  },
+  "lifecycle": {
+    "apiRunId": "51738841-b204-4c75-b58f-6d8897d8cc53",
+    "status": "passed",
+    "t11": {
+      "status": "passed",
+      "releaseId": "release-t6-ethonline-2026",
+      "packageHash": "sha256:56b96d50aec66f6c687cc56ed54f8b408a4a38fc6e10c697106c67c3791ec1cd",
+      "manifestHash": "sha256:3b9f5001025a9a7ab6dd80bf17516d55e04cb3c7e918731405c9c7f09c1d6a7a",
+      "permissionHash": "sha256:7171a1991636a5923a86991b8b9f284b9a5a5082458645a05d7f69f0f0eed56b",
+      "policyId": "s1vfx24dxzpl8k7i5qv6culi",
+      "aggregationId": "gjr8hmeu5501xzfog72zc60j",
+      "allowedTransactionHash": "0x8bdb80562e8baa6bb2c177845f0166cc188c70a14a7f9e77e2eee763f7c2eb32",
+      "forbiddenRejectionCode": "PRIVY_POLICY_REJECTED_400",
+      "executionMethod": "eth_signTransaction"
+    },
+    "t12": {
+      "status": "passed",
+      "releaseId": "release-t12-expanded-ethonline-2026",
+      "packageHash": "sha256:8c434023dbc035910b8d3a052b558eb4bc347dbead8087072c54227ee4bba34d",
+      "manifestHash": "sha256:c0abd1fd16081cb090dce81b095c44b900b7bbb3f30e75420af199ad5ec93016",
+      "permissionHash": "sha256:03addc680f02084339b8274161a478bd360518ae485de631d50b203b5094b4ff",
+      "classification": "EXPANDED",
+      "requiresHumanReview": true,
+      "blockedBeforeReauthorization": true,
+      "policyId": "koc4wszgl0wfsrfa3w3f7bjb",
+      "aggregationId": "amkysfst1j5epm8qqcsone50",
+      "directTransactionHash": "0x4054eba91c406ef828a70c5d8d4093cd7aa876873aa9b8139ae38de3cb2c2934",
+      "ensWriteCount": 4,
+      "privyBeforeEns": true
+    },
+    "t13": {
+      "status": "passed",
+      "signerCountAfterRevoke": 0,
+      "postRevokeRejectionCode": "RUNNER_REFUSED_STALE_OR_REVOKED",
+      "ensStatusWriteHash": "0x6be1d6718c95d7033bc2efbaf9e80845ce279927d0a3cb509056b0503617503c",
+      "ensStatusAfterRevoke": "revoked",
+      "unauthorizedWriter": "0x42D5Fb257d479187607D47C19433Be6aEEd4a9A9",
+      "unauthorizedRestoreRejected": true
+    },
+    "cleanup": {
+      "privyPoliciesDeleted": true,
+      "privyAggregationsDeleted": true
+    }
+  },
+  "security": {
+    "mainnetWrite": false,
+    "secretsRecorded": false,
+    "ownerCredentialPassedToRunner": false,
+    "companyTermsPublishedToEns": false,
+    "frontendTouched": false
+  }
+}

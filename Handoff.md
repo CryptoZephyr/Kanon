@@ -4,7 +4,7 @@ Canonical source: [Kanon Handoff in Notion](https://app.notion.com/p/3cac5381831
 
 ## Current state
 
-The repository is a fresh Kanon workspace. T0 setup, T1A, the Privy feasibility spike, T1B, T2, T5, T6, T7, T8, T9, T10, T11, T12, T13, and T14 are complete locally, with T11 to T13 proven against the live Sepolia fixtures. T6 has a real Sepolia ENSv2 write/read/permission proof under the owner-authorized namespace `kanon-ethonline-2026.eth`. T7 binds that live identity to a vendor-specific adapter with fail-closed resolver and approved-state checks. T8 and T9 bind installation state, exact human approval, delegated Privy authority, and verified ENS state. T10 proves a delegated-only runner that refuses stale or revoked work before execution. A live Sepolia Privy business wallet, separate owner quorum, agent signer, and signer-specific policy are configured. Allowed and forbidden signing probes pass, the agent cannot perform an owner-level wallet update, live surface probes cover calldata function and argument restrictions, timing windows, and rolling native-value limits, and the funded delegated send, receipt, revoke, and post-revoke checks pass. T1B freezes a conservative authority grammar and deterministic `permissionHash` from that evidence. T2 classifies authority changes with proof-backed coverage. T5 makes the compiler execution-method aware. T11 proves activation and allowed delegated execution, T12 proves human-gated authority expansion before the ENS update, T13 proves signer removal, post-revoke rejection, ENS revoked state, and unauthorized restore rejection, and T14 freezes the versioned backend/API data contract without adding an API server or frontend assumptions.
+The repository is a complete Kanon workspace. T0 setup, T1A, the Privy feasibility spike, T1B, T2, T5, T6, T7, T8, T9, T10, T11, T12, T13, and T14 are complete locally, with T11 to T13 proven against the live Sepolia fixtures. T6 has a real Sepolia ENSv2 write/read/permission proof under the owner-authorized namespace `kanon-ethonline-2026.eth`. T7 binds that live identity to a vendor-specific adapter with fail-closed resolver and approved-state checks. T8 and T9 bind installation state, exact human approval, delegated Privy authority, and verified ENS state. T10 proves a delegated-only runner that refuses stale or revoked work before execution. A live Sepolia Privy business wallet, separate owner quorum, agent signer, and signer-specific policy are configured. Allowed and forbidden signing probes pass, the agent cannot perform an owner-level wallet update, live surface probes cover calldata function and argument restrictions, timing windows, and rolling native-value limits, and the funded delegated send, receipt, revoke, and post-revoke checks pass. T1B freezes a conservative authority grammar and deterministic `permissionHash` from that evidence. T2 classifies authority changes with proof-backed coverage. T5 makes the compiler execution-method aware. T11 proves activation and allowed delegated execution, T12 proves human-gated authority expansion before the ENS update, T13 proves signer removal, post-revoke rejection, ENS revoked state, and unauthorized restore rejection, and T14 freezes the versioned backend/API data contract without adding frontend assumptions. The owner-authorized Render and Neon deployment is also live and has passed the complete remote lifecycle proof. It was performed ahead of the documented T15 then T16 ordering so the backend proof could be completed while the frontend remains untouched.
 
 Kanon is a business agent-control runtime. Privy is the financial-authority plane. ENSv2 is the company-controlled identity and namespace plane. A manifest declares requested capability, the company defines final terms, a human approves the exact normalized authority, and the active delegated signer operates only within the verified Privy policy.
 
@@ -35,6 +35,11 @@ Kanon is a business agent-control runtime. Privy is the financial-authority plan
 - Privy `llms.txt` and `skill.md` fallback references.
 - ENS `llms.txt` and `llms-full.txt` references.
 - Context7 MCP configuration for `/ensdomains/docs` use.
+- Private GitHub repository `https://github.com/CryptoZephyr/Kanon`, created and pushed with GitHub CLI.
+- Neon free PostgreSQL project `kanon-ethonline-2026` in `aws-eu-central-1`, database migration applied successfully.
+- Render free services `kanon-api` and `kanon-runner`, both using Node.js `22.23.2`, with public HTTPS health endpoints.
+- Render service configuration in `render.yaml`, reconciled to the actual native-Node services and separate start commands.
+- Deployed proof summary in `evidence/deployment/render-neon-latest.json`, with no secret values.
 
 ## Documentation tooling status
 
@@ -65,6 +70,12 @@ The official ENS machine-readable files were reachable. The Context7 MCP endpoin
 - `.env.example` contains zero nonempty assignments.
 - Local `.env.local` is ignored and `.env.example` remains trackable.
 - Repository secret-pattern scan returned zero matches.
+- GitHub CLI verified the private repository and local/remote commit parity.
+- Render deployment `dep-daj104lg1s2s7391p0i0` for the API and `dep-daj1037qj5pc73bs04q0` for the runner reached `live` on the free plan.
+- `https://kanon-api.onrender.com/healthz` returned API and Neon database `ok`.
+- `https://kanon-runner.onrender.com/healthz` returned runner and Neon database `ok`.
+- The public API rejected an unauthenticated proof start with HTTP `401` and accepted a company-authenticated start with HTTP `202`.
+- Remote lifecycle run `51738841-b204-4c75-b58f-6d8897d8cc53` passed T11, T12, and T13 through Render, Neon, Privy, ENSv2, and the isolated runner. All temporary Privy policies and aggregations were deleted.
 
 ## Environment readiness
 
@@ -74,6 +85,7 @@ The official ENS machine-readable files were reachable. The Context7 MCP endpoin
 - The provisional Privy spike fixture is Ethereum Sepolia, chain ID `11155111`, native ETH, with the same public Sepolia RPC. Current official Privy documentation lists this network and native asset as supported. This is a spike fixture, not a finalized company-authority grammar.
 - `ENS_ORG_NAMESPACE=kanon-ethonline-2026.eth` is configured in ignored `.env.local` for the authorized Sepolia proof.
 - No secret values were printed, committed, or added to project documentation.
+- The deployed services received secrets through Render environment variables only. The public runner receives delegated execution credentials and the application shared secret, but no owner or ENS control credentials.
 
 ## Security boundary retained
 
@@ -124,6 +136,10 @@ The prior pre-Privy `permissionHash` decision gate is retired. No final authorit
 - The architecture names `apps/api` and a later web surface, while the required initial structure contains only `apps/runner` and the five packages. API and frontend work remain deferred as instructed.
 - The live Notion pages report `unverified` page status. Their content was fetched as the current project source, but that metadata is not an independent approval signal.
 - The T11 to T13 live proof uses owner-controlled Sepolia resources and leaves the ENS agent name persistent with `kanon.status=revoked`. The negative T12 provider-failure rollback variant remains a follow-up integration test for the API layer. The local lifecycle contract keeps the old active state until the new authority and ENS state are both configured.
+- The first remote lifecycle attempt failed closed because the persistent ENS fixture was already in the terminal `revoked` state from an earlier run. The existing T6 setup probe restored the exact approved release-A state, after which the remote proof passed. The proof is therefore not repeatable from its terminal state without an explicit, owner-authorized ENS baseline reset. This is an implementation risk for a future production API and must be handled as a controlled fixture reset, not an implicit broadening or record overwrite.
+- Render's free topology requires the runner to be a separate public web service. Application-level shared-secret authentication protects its internal endpoint, and both services can sleep when idle. Warm both endpoints before a demo. This is a deployment limitation, not a replacement for Privy policy enforcement.
+- The Neon connection uses TLS. The current `pg` runtime reports that `sslmode=require` is treated as `verify-full` today and warns that future major versions will follow standard libpq semantics. Set the production connection value explicitly to `sslmode=verify-full` before upgrading the PostgreSQL client.
+- The owner deployment directive placed backend deployment before the documented T15 frontend-design gate and T16 deployment item. The owner instruction is recorded as authoritative for this run. The documented sequence should be reviewed before T17 planning so the task numbering does not imply that deployment is still pending.
 
 ## Privy feasibility spike record
 
@@ -177,8 +193,8 @@ Status: DONE.
 
 ## Exact repository state
 
-The repository is initialized locally on branch `main` with no remote configured. The dependency lockfile is present. The current working tree contains the verified T1A domain foundation, final T1B authority model, T2 permission diff engine, T5 execution-method-aware Privy compiler, T6 ENSv2 write probe, T7 ENS identity adapter, T8 and T9 lifecycle contracts, T10 isolated runner, T11 to T13 live lifecycle probe, the T14 API contract module and tests, read-only documentation evidence, live Privy and ENS write/read/permission evidence, isolated Privy spike harnesses, lifecycle evidence, and synchronized documentation edits. T5 through T14 changes are not committed yet. Live Privy resource identifiers and the T11 to T13 transaction hashes are recorded in the evidence files. `.env.local` remains ignored and no secret value is present in tracked files. All ENS writes remain within the owner-authorized Sepolia hackathon namespace. T11 and T12 updated only the protected records through the authorized company writer. T13 changed only `kanon.status` to `revoked`; the persistent identity records remain readable. No mainnet or production ENS write was performed.
+The repository is on branch `main` with the private remote `https://github.com/CryptoZephyr/Kanon`. The dependency lockfile is present. The current working tree contains the verified T1A domain foundation, final T1B authority model, T2 permission diff engine, T5 execution-method-aware Privy compiler, T6 ENSv2 write probe, T7 ENS identity adapter, T8 and T9 lifecycle contracts, T10 isolated runner, T11 to T13 live lifecycle probe, the T14 API contract module and tests, Render and Neon deployment configuration, deployment evidence, read-only documentation evidence, live Privy and ENS write/read/permission evidence, isolated Privy spike harnesses, lifecycle evidence, and synchronized documentation edits. `.env.local` remains ignored and no secret value is present in tracked files. All ENS writes remain within the owner-authorized Sepolia hackathon namespace. T11 and T12 updated only the protected records through the authorized company writer. T13 changed only `kanon.status` to `revoked`; the persistent identity records remain readable. No mainnet or production ENS write was performed. The final verification commit and local/remote parity are recorded after the last documentation update.
 
 ## Exact next action
 
-T11, T12, T13, and T14 are complete. The exact next action is T15, wait for the owner product-design handoff. Keep the frontend untouched until that design is supplied, and keep all ENS work on the authorized Sepolia namespace only.
+T11, T12, T13, T14, and the owner-authorized Render and Neon deployment are complete. The exact next action is T15, wait for the owner product-design handoff. Keep the frontend untouched until that design is supplied, keep both services warm for any demo proof, and keep all ENS work on the authorized Sepolia namespace only.

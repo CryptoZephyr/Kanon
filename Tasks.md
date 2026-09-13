@@ -232,9 +232,34 @@ Acceptance:
 - [x] Mismatched authority, readback, update, and revoke evidence fails closed.
 - [x] Contract tests cover the versioned route surface, secret boundary, active authority, update, revoke, evidence, and error envelopes.
 
+### T16 - Public backend deployment
+
+Status: DONE, owner-authorized Render and Neon deployment with live lifecycle proof
+
+The owner directed this deployment before the documented T15 frontend-design gate. Frontend work remains untouched.
+
+- GitHub repository `https://github.com/CryptoZephyr/Kanon` is private and was created and pushed with GitHub CLI.
+- Neon free project `kanon-ethonline-2026` uses PostgreSQL 18 in `aws-eu-central-1`, database `kanon`, branch `br-spring-block-b2xd3rlk`. The existing migration passed.
+- Render free service `kanon-api` is live at `https://kanon-api.onrender.com`, service ID `srv-daj103tg1s2s7391ov3g`, deployment `dep-daj104lg1s2s7391p0i0`.
+- Render free service `kanon-runner` is live at `https://kanon-runner.onrender.com`, service ID `srv-daj102fqj5pc73bs02r0`, deployment `dep-daj1037qj5pc73bs04q0`.
+- Both services use Node.js `22.23.2`, pnpm `11.5.0`, one free instance in Frankfurt, and reach Neon successfully through TLS.
+- The runner is public because of the Render free-service topology. Its internal endpoint requires the application shared secret. Owner and ENS control credentials remain API-only, and the runner receives delegated execution material only.
+- The API rejected an unauthenticated proof start with HTTP `401` and accepted a company-authenticated start with HTTP `202`.
+- Remote run `51738841-b204-4c75-b58f-6d8897d8cc53` passed T11 to T13 through Render, Neon, Privy, ENSv2, and the isolated runner. The proof used `eth_signTransaction` for stateful limits, broadcast signed transactions separately, and removed temporary Privy policies and aggregations.
+- The complete non-secret deployment record is `evidence/deployment/render-neon-latest.json`.
+
+Acceptance:
+
+- [x] API and runner are live on Render free services with public HTTPS health checks.
+- [x] Neon migration and database health checks pass from both deployed services.
+- [x] Secrets are stored in provider environment variables only and are absent from the repository.
+- [x] Privy and ENSv2 are reachable from the deployed API path.
+- [x] The deployed lifecycle proof covers allowed execution, forbidden rejection, human-gated expansion, Privy-before-ENS update, revoke, post-revoke failure, and unauthorized ENS restore rejection.
+- [x] No paid upgrade, mainnet ENS write, or frontend change was made.
+
 ## Final verification checkpoint
 
-Status: T11, T12, T13, and T14 complete. The working tree remains intentionally uncommitted on local `main`, with no remote configured. `.env.local` is ignored and no secret value is tracked. The live lifecycle evidence is in `evidence/lifecycle/t11-t13-latest.json`. T14 contract evidence is in `tests/api-contracts.t14.test.ts`.
+Status: T11, T12, T13, T14, and the owner-authorized T16 deployment complete. The repository is on private GitHub remote `https://github.com/CryptoZephyr/Kanon` on branch `main`. `.env.local` is ignored and no secret value is tracked. The live lifecycle evidence is in `evidence/lifecycle/t11-t13-latest.json`, and the deployed proof summary is in `evidence/deployment/render-neon-latest.json`. T14 contract evidence is in `tests/api-contracts.t14.test.ts`.
 
 - Node.js `22.23.2`, pnpm `11.5.0`, TypeScript `5.9.2`, ESLint `9.35.0`, Vitest `3.2.4`, and Prettier `3.6.2` are selected.
 - `pnpm install --frozen-lockfile`: passed across all 7 workspace projects.
@@ -244,7 +269,13 @@ Status: T11, T12, T13, and T14 complete. The working tree remains intentionally 
 - `pnpm format:check`: passed.
 - `git diff --check`: passed.
 - Official Privy MCP, official Privy Agent Skill, Privy machine-readable fallback docs, ENS machine-readable docs, and Context7 `/ensdomains/docs` remain configured and verified.
+- Render service health, Neon migration, private GitHub visibility, API authentication, and the remote lifecycle proof passed. Full deployment identifiers and evidence are in `evidence/deployment/render-neon-latest.json`.
 - No frontend design or implementation was added. No mainnet or production ENS write was performed.
+
+Deployment risk and sequence note:
+
+- The first remote proof failed closed because the persistent ENS fixture was already revoked. The existing T6 setup probe restored the exact approved baseline before the successful run. Future proof runs need an explicit owner-authorized baseline reset before starting.
+- The current documented list places T15 before T16, while this owner-authorized deployment was completed ahead of that order. Review the numbering before T17 planning. T15 remains the exact next action and the frontend stays untouched.
 
 ### T1A - Minimal agent/domain contract
 
@@ -357,4 +388,4 @@ T15 is blocked by owner design. Do not invent layout, typography, components, da
 
 ## Next action
 
-T11, T12, T13, and T14 are complete. The exact next action is T15, wait for the owner product-design handoff. Keep the frontend untouched until that design is supplied, and keep all ENS work on the authorized Sepolia namespace only.
+T11, T12, T13, T14, and the owner-authorized T16 deployment are complete. The exact next action is T15, wait for the owner product-design handoff. Keep the frontend untouched until that design is supplied, keep both free Render services warm for any demo proof, and keep all ENS work on the authorized Sepolia namespace only.

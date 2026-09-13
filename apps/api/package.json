@@ -1,9 +1,9 @@
 {
-  "name": "@kanon/ens",
+  "name": "@kanon/api",
   "version": "0.0.0",
   "private": true,
   "type": "module",
   "dependencies": {
-    "viem": "2.56.3"
+    "@kanon/shared": "workspace:*"
   }
 }

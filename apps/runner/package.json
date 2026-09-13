@@ -2,5 +2,9 @@
   "name": "@kanon/runner",
   "version": "0.0.0",
   "private": true,
-  "type": "module"
+  "type": "module",
+  "dependencies": {
+    "@kanon/shared": "workspace:*",
+    "viem": "2.56.3"
+  }
 }

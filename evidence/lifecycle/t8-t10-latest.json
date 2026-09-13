@@ -1,0 +1,31 @@
+{
+  "schema": "kanon.lifecycle-proof",
+  "version": 1,
+  "status": "passed",
+  "generatedAt": "2026-09-12T17:17:41.083Z",
+  "chainWritesAttempted": false,
+  "secretsRecorded": false,
+  "frontendTouched": false,
+  "t8": {
+    "status": "ACTIVE",
+    "activeGeneration": 0,
+    "activeAuthorityKind": "DELEGATED_SIGNER",
+    "ensVerified": true
+  },
+  "t9": {
+    "classification": "EXPANDED",
+    "requiresHumanReview": true,
+    "afterUpdate": "UPDATE_AVAILABLE",
+    "afterReauthorization": "AWAITING_REAUTHORIZATION",
+    "activeReleaseUnchanged": true
+  },
+  "t10": {
+    "allowedOutcome": "SUCCEEDED",
+    "forbiddenOutcome": "REJECTED",
+    "forbiddenRejectionCode": "policy_violation",
+    "staleRefused": true,
+    "executorCalls": 2,
+    "ownerAuthorityPassedToExecutor": false,
+    "executionMethod": "eth_sendTransaction"
+  }
+}

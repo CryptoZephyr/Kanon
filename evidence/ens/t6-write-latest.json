@@ -1,0 +1,127 @@
+{
+  "milestone": "T6",
+  "status": "passed",
+  "recordedAt": "2026-09-12T16:35:31.864Z",
+  "network": {
+    "name": "Ethereum Sepolia",
+    "chainId": 11155111
+  },
+  "namespace": {
+    "parent": "kanon-ethonline-2026.eth",
+    "agents": "agents.kanon-ethonline-2026.eth",
+    "representativeAgent": "representative-agent.agents.kanon-ethonline-2026.eth",
+    "representativeLabel": "representative-agent",
+    "availabilityBeforeWrite": true,
+    "parentWasRegisteredByThisRun": true
+  },
+  "actors": {
+    "controlWallet": "0x8b88E1E1174eDC65B08de75A5439f130da8A3DFd",
+    "representativeAgentOwner": "0x42D5Fb257d479187607D47C19433Be6aEEd4a9A9",
+    "controlWalletOwnsParent": true,
+    "representativeAgentHasNoRegistryRoles": true
+  },
+  "deployments": {
+    "ethRegistrar": "0xa88553F454b77203B0D036A05c894d555EAAa2Cc",
+    "ethRegistry": "0xBDC85dD5b15D7ecb354cd7cb6f2c50b4f2c4F0E2",
+    "verifiableFactory": "0x10dC6333CDFe1FCEf624c6e0a8221b91804Cd7ef",
+    "userRegistryImplementation": "0x624a25d67B59D587752EbEc8DdeD8827dAe52050",
+    "permissionedResolverImplementation": "0x9EAe5C2730a7dD16BDD1DeE6421a1B91e3B0365e",
+    "universalResolverV2": "0x4A1817d13E9cF196f471725176355C1234b63C70",
+    "mockUsdc": "0x768F42455A2D082E23ceeF7d51e5787C82d67a39",
+    "parentRegistry": "0x331129C20A2145e8c4A3c7067823824b0F214Fc8",
+    "agentsRegistry": "0x60e11eCC3e380A75e3328831049e6809771b8bA6",
+    "permissionedResolver": "0x0D4560DaFEb04Cf022472B5085070A05E0d77e0B"
+  },
+  "payment": {
+    "token": "MockUSDC",
+    "registrar": "0xa88553F454b77203B0D036A05c894d555EAAa2Cc",
+    "durationSeconds": "31536000",
+    "note": "Sepolia deployment test token only"
+  },
+  "transactions": {
+    "paymentMint": "0x3d2e3b7e76fcd955a41ed88cf452d944bebc1b4f2c8065a7e4cc68b5517e77ac",
+    "paymentApproval": "0x3f2b39819252d188ea31fcef49b002e9aeca93038714e0f3cdc705ebbb1751fc",
+    "parentCommit": "0xf44d86cfd68094d631f7791dff4fd26d0d5a3809bc5ac31d89d596510898cce5",
+    "parentRegister": "0xb829dbc094ff3f2b63faa1b2a20ae9029ae1b61b5d51c5090f2b2f25e70202bb",
+    "paymentApprovalRevoke": "0x38b610c36d401ee3f05589569a040e5db93ed057574373059101121b3960bff6",
+    "parentRegistryDeploy": "0x11e344f15a6aa83ba72b74c56455bb2e73e92a8d2a94ddcfadd8d15848d61758",
+    "parentSubregistry": "0x39fc6f90e026fe5bb48a0a238affaca581913d5cb9854b3eb8a373b7e46e9324",
+    "parentRegistryParent": "0x53860cf17a9c93d074308a532069737c7bbae96dd86ae08fe7ae42e9658e67b8",
+    "agentsRegistryDeploy": "0x9fc044459ddad4a8934ff647970774300d4726398d7d2e1cac7ea3779aae1b86",
+    "agentsRegister": "0x8c299eaf199764928f9729b3e33c11ff9dd2abed5ca1577424b1d35e5cef2901",
+    "agentsRegistryParent": "0x2e83542d4598e69b873a41711ac7fa3a22ef39104c9c6a241b2d7565a5dfc12a",
+    "resolverDeploy": "0x510c31c7ae10f6188bceacd3d4488950c419f7673cac9a35c9468870276a894c",
+    "representativeAgentRegister": "0x900de869d79fc2d5263c56f86f1a04ab70fd974a8f27b7164d802af1cddc102c",
+    "authorize_kanon.agentId": "0xd744ab28e8f331ba444c800a623ee9bd2862d2bd045ac875a42b7496c5c07405",
+    "authorize_kanon.release": "0x4f0d0d91c2b92a1ccb0c9f3ca280988181c010ca6cb78db9e76800a4be3d268b",
+    "authorize_kanon.permissionHash": "0xb64467febdd6bb5e87c2417e7273c588853321b4bdf04c9a386851ce2bcd92b8",
+    "authorize_kanon.status": "0x2cf20c66638b76372c8882d0a53e1cce5921d2b9bbee33e07b16da3b74729886",
+    "write_kanon.agentId": "0x6a8932c28b50492ddd4f9509291565bcd48e4c607505732418b310c6967df4df",
+    "write_kanon.release": "0xe1032d6edb48e6877a802c7288af2b63c47e24abfbc92001ea98a711b95b79a8",
+    "write_kanon.permissionHash": "0x31b40d8bab8d5657e54c250bf865936496aa92123b3fc592ba405caa9cefd924",
+    "write_kanon.status": "0x4f251973d0f3e0dcdf6ad34c934727dcb43e840e9115b7d85329f125acff3962",
+    "authorizedStatusRewrite": "0x81de26683520a08bee2db546efa2b0d628c11291d55fedfb68bb62d4798919c3"
+  },
+  "hierarchy": {
+    "parentOwner": "0x8b88E1E1174eDC65B08de75A5439f130da8A3DFd",
+    "parentSubregistry": "0x331129C20A2145e8c4A3c7067823824b0F214Fc8",
+    "agentsOwner": "0x8b88E1E1174eDC65B08de75A5439f130da8A3DFd",
+    "agentsSubregistry": "0x60e11eCC3e380A75e3328831049e6809771b8bA6",
+    "representativeOwner": "0x42D5Fb257d479187607D47C19433Be6aEEd4a9A9",
+    "representativeResolver": "0x0D4560DaFEb04Cf022472B5085070A05E0d77e0B",
+    "universalResolver": {
+      "resolver": "0x0D4560DaFEb04Cf022472B5085070A05E0d77e0B",
+      "node": "0x99559cbe48957d053552b64d39bffe65a07f480fd8c703f389adfea9501cb5ef",
+      "version": "0"
+    }
+  },
+  "records": {
+    "protectedKeys": [
+      "kanon.agentId",
+      "kanon.release",
+      "kanon.permissionHash",
+      "kanon.status"
+    ],
+    "expected": {
+      "kanon.agentId": "com.example.treasury",
+      "kanon.release": "release-t6-ethonline-2026",
+      "kanon.permissionHash": "sha256:7171a1991636a5923a86991b8b9f284b9a5a5082458645a05d7f69f0f0eed56b",
+      "kanon.status": "approved"
+    },
+    "readBackThroughUniversalResolver": {
+      "kanon.agentId": "com.example.treasury",
+      "kanon.release": "release-t6-ethonline-2026",
+      "kanon.permissionHash": "sha256:7171a1991636a5923a86991b8b9f284b9a5a5082458645a05d7f69f0f0eed56b",
+      "kanon.status": "approved"
+    },
+    "resolverReturnedByNormalResolution": {
+      "kanon.agentId": "0x0D4560DaFEb04Cf022472B5085070A05E0d77e0B",
+      "kanon.release": "0x0D4560DaFEb04Cf022472B5085070A05E0d77e0B",
+      "kanon.permissionHash": "0x0D4560DaFEb04Cf022472B5085070A05E0d77e0B",
+      "kanon.status": "0x0D4560DaFEb04Cf022472B5085070A05E0d77e0B"
+    }
+  },
+  "permissionProof": {
+    "resolverRootTextAdminForControl": true,
+    "controlHasNoRootTextWriterRole": true,
+    "representativeAgentHasNoRootTextWriterRole": true,
+    "scopedCompanyWriter": "0x8b88E1E1174eDC65B08de75A5439f130da8A3DFd",
+    "authorizedCompanyWriteSucceeded": true,
+    "authorizedStatusRewrite": "0x81de26683520a08bee2db546efa2b0d628c11291d55fedfb68bb62d4798919c3",
+    "unauthorizedWriter": "0x42D5Fb257d479187607D47C19433Be6aEEd4a9A9",
+    "unauthorizedWriteRejected": true,
+    "unauthorizedErrorName": "CallExecutionError",
+    "protectedStatusUnchanged": true
+  },
+  "balance": {
+    "initialWei": "77518161429685216",
+    "finalWei": "75229480487917384"
+  },
+  "references": {
+    "deploymentCommit": "97a57293f3b4279d94b571e678edb53ce62638f4",
+    "deployments": "https://docs.ens.domains/learn/deployments",
+    "permissionedRegistry": "https://docs.ens.domains/ensv2/permissioned-registry",
+    "permissionedResolver": "https://docs.ens.domains/ensv2/permissioned-resolver",
+    "enhancedAccessControl": "https://docs.ens.domains/ensv2/enhanced-access-control"
+  }
+}

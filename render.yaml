@@ -1,0 +1,84 @@
+services:
+  - name: kanon-runner
+    type: web
+    runtime: docker
+    repo: https://github.com/CryptoZephyr/Kanon
+    branch: main
+    region: frankfurt
+    plan: free
+    numInstances: 1
+    dockerfilePath: ./Dockerfile.runner
+    dockerContext: .
+    healthCheckPath: /healthz
+    autoDeployTrigger: commit
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "8080"
+      - key: DATABASE_URL
+        sync: false
+      - key: RUNNER_SHARED_SECRET
+        sync: false
+      - key: PRIVY_APP_ID
+        sync: false
+      - key: PRIVY_APP_SECRET
+        sync: false
+      - key: PRIVY_AUTHORIZATION_KEY_ID
+        sync: false
+      - key: PRIVY_AUTHORIZATION_PRIVATE_KEY
+        sync: false
+      - key: FINANCIAL_RPC_URL
+        sync: false
+      - key: FINANCIAL_CHAIN_ID
+        value: "11155111"
+      - key: FINANCIAL_ASSET
+        sync: false
+
+  - name: kanon-api
+    type: web
+    runtime: docker
+    repo: https://github.com/CryptoZephyr/Kanon
+    branch: main
+    region: frankfurt
+    plan: free
+    numInstances: 1
+    dockerfilePath: ./Dockerfile.api
+    dockerContext: .
+    healthCheckPath: /healthz
+    autoDeployTrigger: commit
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "8080"
+      - key: DATABASE_URL
+        sync: false
+      - key: RUNNER_BASE_URL
+        sync: false
+      - key: RUNNER_SHARED_SECRET
+        sync: false
+      - key: KANON_COMPANY_API_TOKEN
+        sync: false
+      - key: PRIVY_APP_ID
+        sync: false
+      - key: PRIVY_APP_SECRET
+        sync: false
+      - key: PRIVY_AUTHORIZATION_KEY_ID
+        sync: false
+      - key: PRIVY_OWNER_KEY_QUORUM_ID
+        sync: false
+      - key: PRIVY_OWNER_AUTHORIZATION_PRIVATE_KEY
+        sync: false
+      - key: FINANCIAL_RPC_URL
+        sync: false
+      - key: FINANCIAL_CHAIN_ID
+        value: "11155111"
+      - key: FINANCIAL_ASSET
+        sync: false
+      - key: ENS_SEPOLIA_RPC_URL
+        sync: false
+      - key: ENS_CONTROL_PRIVATE_KEY
+        sync: false
+      - key: ENS_ORG_NAMESPACE
+        sync: false

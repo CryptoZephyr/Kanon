@@ -1,0 +1,62 @@
+{
+  "milestone": "T6",
+  "status": "passed",
+  "writeProofEvidence": "evidence/ens/t6-write-latest.json",
+  "recordedAt": "2026-09-12T15:48:59.4597826Z",
+  "network": {
+    "name": "Ethereum Sepolia",
+    "chainId": 11155111,
+    "rpcConfigured": true,
+    "rpcReadCheck": "passed"
+  },
+  "control": {
+    "address": "0x8b88E1E1174eDC65B08de75A5439f130da8A3DFd",
+    "balanceWei": "77518161429685216",
+    "balanceReadCheck": "passed"
+  },
+  "deployments": {
+    "ETHRegistrar": {
+      "address": "0xa88553f454b77203b0d036a05c894d555eaaa2cc",
+      "codePresent": true
+    },
+    "ETHRegistry": {
+      "address": "0xbdc85dd5b15d7ecb354cd7cb6f2c50b4f2c4f0e2",
+      "codePresent": true
+    },
+    "PermissionedResolverImpl": {
+      "address": "0x9eae5c2730a7dd16bdd1dee6421a1b91e3b0365e",
+      "codePresent": true
+    },
+    "UniversalResolverV2": {
+      "address": "0x4a1817d13e9cf196f471725176355c1234b63c70",
+      "codePresent": true
+    },
+    "VerifiableFactory": {
+      "address": "0x10dc6333cdfe1fcef624c6e0a8221b91804cd7ef",
+      "codePresent": true
+    }
+  },
+  "documentation": {
+    "officialConcise": "https://docs.ens.domains/llms.txt",
+    "officialFull": "https://docs.ens.domains/llms-full.txt",
+    "overview": "https://docs.ens.domains/ensv2/overview",
+    "deployments": "https://docs.ens.domains/learn/deployments",
+    "permissionedRegistry": "https://docs.ens.domains/ensv2/permissioned-registry",
+    "permissionedResolver": "https://docs.ens.domains/ensv2/permissioned-resolver",
+    "enhancedAccessControl": "https://docs.ens.domains/ensv2/enhanced-access-control",
+    "context7Endpoint": "https://mcp.context7.com/mcp",
+    "context7LibraryId": "/ensdomains/docs",
+    "context7InitializeStatus": 200,
+    "context7QueryStatus": 200
+  },
+  "verifiedFindings": [
+    "ENSv2 Sepolia is deployed, but the official docs mark the contracts and interfaces as beta and changeable before mainnet.",
+    "The Permissioned Registry manages ownership, subregistries, and EAC roles.",
+    "The Permissioned Resolver supports record-level text and data permissions through EAC.",
+    "The Verifiable Factory is the documented path for deploying UserRegistry and resolver proxies.",
+    "Forward resolution requires the parent name to point at the child UserRegistry and a resolver to be configured.",
+    "The owner authorized the exact Sepolia namespace kanon-ethonline-2026.eth and the live write/read/permission proof passed."
+  ],
+  "blockers": [],
+  "nextDecision": "T6 is complete. Continue with T7, the ENS identity adapter and approved-state binding."
+}

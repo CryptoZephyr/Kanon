@@ -640,6 +640,12 @@ function validateNormalizedPermissionSet(
   };
 }
 
+export function assertValidNormalizedPermissionSet(
+  value: unknown,
+): asserts value is NormalizedPermissionSet {
+  validateNormalizedPermissionSet(value, "permissionSet");
+}
+
 function quantity(value: DecimalQuantity): bigint {
   return BigInt(value);
 }

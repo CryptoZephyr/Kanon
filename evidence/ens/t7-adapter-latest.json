@@ -1,0 +1,36 @@
+{
+  "milestone": "T7",
+  "status": "passed",
+  "recordedAt": "2026-09-12T16:53:34.413Z",
+  "chainId": 11155111,
+  "writeAttempted": false,
+  "sensitiveCompanyTermsPublished": false,
+  "binding": {
+    "schema": "kanon.ens-identity-binding",
+    "version": 1,
+    "chainId": 11155111,
+    "organizationName": "kanon-ethonline-2026.eth",
+    "namespaceName": "agents.kanon-ethonline-2026.eth",
+    "agentName": "representative-agent.agents.kanon-ethonline-2026.eth",
+    "agentNode": "0x99559cbe48957d053552b64d39bffe65a07f480fd8c703f389adfea9501cb5ef",
+    "resolver": "0x0d4560dafeb04cf022472b5085070a05e0d77e0b",
+    "controlWallet": "0x8b88e1e1174edc65b08de75a5439f130da8a3dfd"
+  },
+  "deployment": {
+    "universalResolverV2": "0x4A1817d13E9cF196f471725176355C1234b63C70"
+  },
+  "verified": {
+    "resolver": "0x0d4560dafeb04cf022472b5085070a05e0d77e0b",
+    "records": {
+      "kanon.agentId": "com.example.treasury",
+      "kanon.release": "release-t6-ethonline-2026",
+      "kanon.permissionHash": "sha256:7171a1991636a5923a86991b8b9f284b9a5a5082458645a05d7f69f0f0eed56b",
+      "kanon.status": "approved"
+    },
+    "mismatches": []
+  },
+  "references": [
+    "https://docs.ens.domains/ensv2/permissioned-resolver",
+    "https://docs.ens.domains/ensv2/enhanced-access-control"
+  ]
+}

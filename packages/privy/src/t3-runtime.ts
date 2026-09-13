@@ -2,11 +2,13 @@ import { appendFile, mkdir, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import {
   PrivyClient,
+  generateAuthorizationSignature,
   generateP256KeyPair,
   type AuthorizationContext,
   type KeyQuorum,
   type Policy,
   type Wallet,
+  type WalletApiRequestSignatureInput,
 } from "@privy-io/node";
 import {
   buildT3PolicyBody,
@@ -40,21 +42,19 @@ const T3_EVIDENCE_PATH = resolve(
   "t3-latest.json",
 );
 
-const REQUIRED_ENVIRONMENT = [
+const REQUIRED_CONTROL_ENVIRONMENT = [
   "PRIVY_APP_ID",
   "PRIVY_APP_SECRET",
   "PRIVY_AUTHORIZATION_KEY_ID",
-  "PRIVY_AUTHORIZATION_PRIVATE_KEY",
   "FINANCIAL_RPC_URL",
   "FINANCIAL_CHAIN_ID",
   "FINANCIAL_ASSET",
 ] as const;
 
-export interface T3Environment {
+export interface PrivyControlEnvironment {
   readonly appId: string;
   readonly appSecret: string;
   readonly agentSignerId: string;
-  readonly agentPrivateKey: string;
   readonly rpcUrl: string;
   readonly chainId: number;
   readonly asset: "native";
@@ -62,10 +62,60 @@ export interface T3Environment {
   readonly forbiddenRecipient: string;
 }
 
+export interface T3Environment extends PrivyControlEnvironment {
+  readonly agentPrivateKey: string;
+}
+
 export interface OwnerCredentials {
   readonly keyQuorumId: string;
   readonly privateKey: string;
   readonly generated: boolean;
+}
+
+export function readPrivyControlEnvironment(
+  environment: NodeJS.ProcessEnv = process.env,
+): PrivyControlEnvironment {
+  const missing = REQUIRED_CONTROL_ENVIRONMENT.filter(
+    (name) => !environment[name] || environment[name]?.trim() === "",
+  );
+  if (missing.length > 0) {
+    throw new Error(
+      `missing required Privy control environment: ${missing.join(", ")}`,
+    );
+  }
+
+  const chainId = Number(environment.FINANCIAL_CHAIN_ID);
+  if (!Number.isSafeInteger(chainId) || chainId <= 0) {
+    throw new TypeError("FINANCIAL_CHAIN_ID must be a positive safe integer");
+  }
+
+  if (environment.FINANCIAL_ASSET !== "native") {
+    throw new Error(
+      "Kanon's verified deployment path only accepts FINANCIAL_ASSET=native",
+    );
+  }
+
+  let rpcUrl: URL;
+  try {
+    rpcUrl = new URL(environment.FINANCIAL_RPC_URL as string);
+  } catch {
+    throw new TypeError("FINANCIAL_RPC_URL must be a valid URL");
+  }
+
+  if (rpcUrl.protocol !== "http:" && rpcUrl.protocol !== "https:") {
+    throw new TypeError("FINANCIAL_RPC_URL must use HTTP or HTTPS");
+  }
+
+  return {
+    appId: environment.PRIVY_APP_ID as string,
+    appSecret: environment.PRIVY_APP_SECRET as string,
+    agentSignerId: environment.PRIVY_AUTHORIZATION_KEY_ID as string,
+    rpcUrl: rpcUrl.toString(),
+    chainId,
+    asset: "native",
+    allowedRecipient: DEFAULT_ALLOWED_RECIPIENT,
+    forbiddenRecipient: DEFAULT_FORBIDDEN_RECIPIENT,
+  };
 }
 
 interface RunnerSuccess {
@@ -134,51 +184,23 @@ export interface T3Evidence {
 export function readT3Environment(
   environment: NodeJS.ProcessEnv = process.env,
 ): T3Environment {
-  const missing = REQUIRED_ENVIRONMENT.filter(
-    (name) => !environment[name] || environment[name]?.trim() === "",
-  );
-  if (missing.length > 0) {
-    throw new Error(`missing required T3 environment: ${missing.join(", ")}`);
-  }
-
-  const chainId = Number(environment.FINANCIAL_CHAIN_ID);
-  if (!Number.isSafeInteger(chainId) || chainId <= 0) {
-    throw new TypeError("FINANCIAL_CHAIN_ID must be a positive safe integer");
-  }
-
-  if (environment.FINANCIAL_ASSET !== "native") {
+  const control = readPrivyControlEnvironment(environment);
+  const agentPrivateKeyValue = environment.PRIVY_AUTHORIZATION_PRIVATE_KEY;
+  if (!agentPrivateKeyValue || agentPrivateKeyValue.trim() === "") {
     throw new Error(
-      "T3 only accepts FINANCIAL_ASSET=native for the provisional fixture",
+      "missing required T3 environment: PRIVY_AUTHORIZATION_PRIVATE_KEY",
     );
   }
 
-  let rpcUrl: URL;
-  try {
-    rpcUrl = new URL(environment.FINANCIAL_RPC_URL as string);
-  } catch {
-    throw new TypeError("FINANCIAL_RPC_URL must be a valid URL");
-  }
-
-  if (rpcUrl.protocol !== "http:" && rpcUrl.protocol !== "https:") {
-    throw new TypeError("FINANCIAL_RPC_URL must use HTTP or HTTPS");
-  }
-
   return {
-    appId: environment.PRIVY_APP_ID as string,
-    appSecret: environment.PRIVY_APP_SECRET as string,
-    agentSignerId: environment.PRIVY_AUTHORIZATION_KEY_ID as string,
-    agentPrivateKey: normalizeAuthorizationPrivateKey(
-      environment.PRIVY_AUTHORIZATION_PRIVATE_KEY as string,
-    ),
-    rpcUrl: rpcUrl.toString(),
-    chainId,
-    asset: "native",
-    allowedRecipient: DEFAULT_ALLOWED_RECIPIENT,
-    forbiddenRecipient: DEFAULT_FORBIDDEN_RECIPIENT,
+    ...control,
+    agentPrivateKey: normalizeAuthorizationPrivateKey(agentPrivateKeyValue),
   };
 }
 
-export function createPrivyClient(environment: T3Environment): PrivyClient {
+export function createPrivyClient(
+  environment: Pick<PrivyControlEnvironment, "appId" | "appSecret">,
+): PrivyClient {
   return new PrivyClient({
     appId: environment.appId,
     appSecret: environment.appSecret,
@@ -190,6 +212,39 @@ export function createAuthorizationContext(
   privateKey: string,
 ): AuthorizationContext {
   return { authorization_private_keys: [privateKey] };
+}
+
+export function createPrivyRestAuthorizationHeaders(input: {
+  readonly appId: string;
+  readonly privateKey: string;
+  readonly method: WalletApiRequestSignatureInput["method"];
+  readonly url: string;
+  readonly body: unknown;
+  readonly requestExpiry?: number;
+}): Readonly<Record<string, string>> {
+  const requestExpiry = input.requestExpiry ?? Date.now() + 15 * 60 * 1000;
+  if (!Number.isSafeInteger(requestExpiry) || requestExpiry <= Date.now()) {
+    throw new TypeError("requestExpiry must be a future safe integer");
+  }
+
+  const headers = {
+    "privy-app-id": input.appId,
+    "privy-request-expiry": String(requestExpiry),
+  } as const;
+  const signable: WalletApiRequestSignatureInput = {
+    version: 1,
+    method: input.method,
+    url: input.url,
+    body: input.body,
+    headers,
+  };
+  return {
+    "privy-authorization-signature": generateAuthorizationSignature({
+      authorizationPrivateKey: input.privateKey,
+      input: signable,
+    }),
+    "privy-request-expiry": String(requestExpiry),
+  };
 }
 
 function assertQuorumMatchesPrivateKey(
@@ -226,6 +281,36 @@ async function persistGeneratedOwnerCredentials(
   process.env.PRIVY_OWNER_KEY_QUORUM_ID = keyQuorumId;
 }
 
+export async function readConfiguredOwnerCredentials(
+  client: PrivyClient,
+  environment: NodeJS.ProcessEnv = process.env,
+): Promise<OwnerCredentials> {
+  const configuredId = environment.PRIVY_OWNER_KEY_QUORUM_ID;
+  const configuredPrivateKey = environment.PRIVY_OWNER_AUTHORIZATION_PRIVATE_KEY
+    ? normalizeAuthorizationPrivateKey(
+        environment.PRIVY_OWNER_AUTHORIZATION_PRIVATE_KEY,
+      )
+    : undefined;
+
+  if (!configuredId || !configuredPrivateKey) {
+    throw new Error(
+      "configured owner quorum ID and owner private key are both required",
+    );
+  }
+
+  const quorum = await client.keyQuorums().get(configuredId);
+  assertQuorumMatchesPrivateKey(
+    quorum,
+    configuredPrivateKey,
+    "configured owner key",
+  );
+  return {
+    keyQuorumId: configuredId,
+    privateKey: configuredPrivateKey,
+    generated: false,
+  };
+}
+
 export async function ensureOwnerCredentials(
   client: PrivyClient,
 ): Promise<OwnerCredentials> {
@@ -243,17 +328,7 @@ export async function ensureOwnerCredentials(
   }
 
   if (configuredId && configuredPrivateKey) {
-    const quorum = await client.keyQuorums().get(configuredId);
-    assertQuorumMatchesPrivateKey(
-      quorum,
-      configuredPrivateKey,
-      "configured owner key",
-    );
-    return {
-      keyQuorumId: configuredId,
-      privateKey: configuredPrivateKey,
-      generated: false,
-    };
+    return readConfiguredOwnerCredentials(client);
   }
 
   const keyPair = await generateP256KeyPair();

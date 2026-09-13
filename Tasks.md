@@ -70,7 +70,181 @@ The owner has resolved the build-order dependency. The detailed sequence is:
 - The initial Privy spike fixture is configured locally as Ethereum Sepolia, chain ID `11155111`, native ETH.
 - A live Privy owner quorum, agent signer quorum, Sepolia business wallet, and signer-specific override policy now exist for T3. Base signing, forbidden-recipient, owner-boundary, delegated send, receipt, revoke, and post-revoke checks pass. No ENS write has been made.
 - The separate live surface probe passes calldata function and argument restrictions, timing windows, and a rolling native-value cap. Request-count rate limiting is unsupported by the current aggregation model.
-- The current local `HEAD` is a clean T2 checkpoint containing the T1A foundation, T3 evidence, final T1B authority model, the permission diff engine, and synchronized documentation. No remote is configured.
+- T5 is now implemented locally as an execution-method-aware Privy policy compiler. `eth_sendTransaction` compiles only stateless controls. `eth_signTransaction` can compile rolling native-value aggregation references and returns the aggregation requirements needed before policy creation. A signed transaction is broadcast separately.
+- The compiler rejects unsupported method and authority combinations with `UNSUPPORTED_POLICY_COMBINATION`, verifies the normalized permission hash before compiling, and never drops unsupported restrictions. The local T5 suite now passes 36 tests. No ENS write has been made.
+- The live T5 compiler probe passed against Privy. The compiled stateless send policy rejected a forbidden `eth_sendTransaction` before broadcast. The compiled stateful sign policy allowed the first sign and rejected the next sign at the rolling cap. Temporary policies and aggregations were owner-signed and removed.
+- The required Node.js `22.23.2` runtime was selected with the official portable distribution. `pnpm install`, `pnpm typecheck`, `pnpm test`, `pnpm lint`, `pnpm format:check`, and `git diff --check` pass under that runtime.
+
+### T6 - Real ENSv2 identity spike
+
+Status: DONE, Sepolia write/read/permission proof passed
+
+Read-only feasibility is complete against the current official ENS documentation and the configured Context7 MCP library `/ensdomains/docs`.
+
+- Ethereum Sepolia chain ID `11155111` is reachable through the configured ENS RPC.
+- The configured ENS control wallet is `0x8b88E1E1174eDC65B08de75A5439f130da8A3DFd` and has Sepolia ETH.
+- The current documented `ETHRegistrar`, `ETHRegistry`, `PermissionedResolverImpl`, `UniversalResolverV2`, and `VerifiableFactory` deployments all contain code on Sepolia.
+- ENSv2 documents confirm hierarchical registries, per-account Permissioned Resolver proxies, and record-level EAC permissions. The contracts and interfaces remain beta and may change before mainnet.
+- Read-only feasibility evidence is recorded in `evidence/ens/t6-feasibility-latest.json`.
+- The exact owner-authorized parent `kanon-ethonline-2026.eth` was available on the Sepolia registrar and was registered with the configured control wallet.
+- The live hierarchy is `kanon-ethonline-2026.eth` -> `agents.kanon-ethonline-2026.eth` -> `representative-agent.agents.kanon-ethonline-2026.eth`.
+- UserRegistry proxies and a Permissioned Resolver proxy were deployed through the official Sepolia Verifiable Factory path.
+- The four protected text records `kanon.agentId`, `kanon.release`, `kanon.permissionHash`, and `kanon.status` read back through Universal Resolver v2.
+- The control wallet has scoped text-role administration and named text-writer roles for the four protected keys. The representative agent owner has no root text-writer role and its attempted rewrite was rejected by the resolver.
+- Full transaction, hierarchy, record, normal-resolution, and unauthorized-writer evidence is recorded in `evidence/ens/t6-write-latest.json`.
+
+T6 boundary and risks:
+
+- This namespace is authorized for the Sepolia hackathon proof only. No production or mainnet ENS name was registered.
+- ENSv2 contracts and interfaces remain beta and may change before mainnet. The deployed commit and addresses are recorded in the evidence file.
+- ENSv2 records prove approved identity state and scoped record-writer behavior. They do not replace Privy financial policy enforcement.
+
+### T7 - ENS identity adapter and approved-state binding
+
+Status: DONE, live read verification and local write-gate tests passed
+
+- `packages/ens/src/index.ts` normalizes ENS names and addresses, binds the organization, namespace, agent node, resolver, and control wallet, and validates the exact hierarchy.
+- The adapter reads only `kanon.agentId`, `kanon.release`, `kanon.permissionHash`, and `kanon.status` through a supplied ENSv2 resolution transport.
+- The adapter rejects resolver provenance or node mismatches and returns deterministic protected-record mismatches.
+- Approved-state writes require an `APPROVED` or `ACTIVE` lifecycle, confirmed active Privy authority, and exact agent, release, and permission-hash equality. Revoked state and mismatched authorization fail closed.
+- The write plan contains public approved-state records only. Company authority terms are not accepted or published by this adapter.
+- `pnpm spike:ens:t7` verified the live Sepolia hierarchy, resolver, node, and four protected records without making another chain write.
+- Evidence is recorded in `evidence/ens/t7-adapter-latest.json`.
+
+Acceptance:
+
+- The adapter read and verification path passed against the real T6 hierarchy.
+- Local tests prove identity normalization, resolver provenance, exact record verification, lifecycle gating, and absence of company terms from the write plan.
+
+### T8 - Minimal installation state
+
+Status: DONE, local lifecycle proof passed
+
+- `packages/shared/src/index.ts` defines the installation state, organization binding, exact release and permission-set identity, delegated Privy binding, verified ENS record state, execution evidence, and revocation evidence.
+- `ACTIVE` requires an approved human decision, an active delegated Privy authority, a verified ENS approved or active state, matching agent and release identity, matching `permissionHash`, and matching authority generation.
+- Owner credentials and owner-management fields are absent from the shared installation contract.
+- Synthetic lifecycle evidence is recorded in `evidence/lifecycle/t8-t10-latest.json`.
+
+Acceptance:
+
+- Local tests prove that stale, revoked, unverified, and mismatched authority cannot become active.
+- No chain write or live Privy mutation was performed by T8.
+
+### T9 - Company terms and human approval boundary
+
+Status: DONE, local approval and update-gating proof passed
+
+- T9 consumes the final T1B normalized permission set. It does not redefine `permissionHash` or broaden the supported authority grammar.
+- Human decisions are bound to the exact agent, release, package hash, manifest hash, and `permissionHash` they approve.
+- Expanded authority is classified through the existing T2 diff engine and remains in `UPDATE_AVAILABLE` until an exact approved `REAUTHORIZE` decision is recorded.
+- Reauthorization does not silently activate a new release. Authority reconfiguration remains a later activation step.
+- Revocation records require delegated Privy loss, ENS revoked state, and failed post-revoke delegated execution before the installation can enter `REVOKED`.
+
+Acceptance:
+
+- Local tests prove exact approval binding, expanded-authority review, reauthorization gating, and incomplete-revocation rejection.
+- The lifecycle proof records `EXPANDED`, `requiresHumanReview: true`, and `AWAITING_REAUTHORIZATION` without any external write.
+
+### T10 - Isolated runner
+
+Status: DONE, local delegated-only runner proof passed
+
+- `apps/runner/src/isolated-runner.ts` creates an execution context only from an active installation.
+- The runner re-reads installation state before every call and refuses non-active, revoked, stale-generation, mismatched-hash, mismatched-method, changed delegated wallet/signer/policy identity, or unverified work.
+- The executor receives only the delegated wallet, delegated signer, policy, selected execution method, and request. There is no owner credential fallback.
+- Allowed execution and forbidden-action rejection are represented as execution evidence. The runner refuses stale work before invoking the executor.
+- `pnpm spike:lifecycle:t8-t10` writes `evidence/lifecycle/t8-t10-latest.json`.
+
+Acceptance:
+
+- The local T10 suite passes allowed delegated execution, forbidden-action rejection, owner-authority absence, and stale/revoked refusal checks.
+- This is a synthetic adapter proof. T11 to T13 now provide the live activation, update reconfiguration, and combined revoke proof.
+
+### T11 - Full activation end to end
+
+Status: DONE, live Sepolia proof passed
+
+- `pnpm spike:lifecycle:t11-t13` connected the lifecycle state machine to the live Privy wallet, signer-specific policy, stateful aggregation, ENSv2 resolver, Universal Resolver v2, and isolated delegated runner.
+- Release A reused the verified T6 approved identity and `permissionHash`. The owner-approved decision moved the installation through `AWAITING_APPROVAL` and `CONFIGURING_AUTHORITY` before it became `ACTIVE`.
+- Privy owner control attached the dedicated agent signer to the release-A policy. The wallet readback showed the signer-specific override, and the delegated `eth_signTransaction` path signed and broadcast an allowed 1 wei Sepolia transaction.
+- ENS approved-state readback verified the exact agent ID, release ID, permission hash, and `approved` status before activation.
+- The live T11 policy and aggregation identifiers, transaction hash, and state snapshots are recorded in `evidence/lifecycle/t11-t13-latest.json`.
+
+Acceptance:
+
+- [x] Human approval is bound to the exact release, package hash, manifest hash, and `permissionHash`.
+- [x] Privy delegated authority is attached before the installation becomes active.
+- [x] ENS approved state and Privy authority agree on agent, release, and permission identity.
+- [x] Allowed delegated execution succeeds through the stateful signing path and separate broadcast.
+- [x] No owner credential enters the runner context.
+
+### T12 - Permission-aware update
+
+Status: DONE, live approved update proof passed
+
+- Release B changed the per-transaction and rolling native-value limits from `1` wei to `2` wei. T2 classified the change as `EXPANDED` and required human review.
+- The lifecycle stopped at `AWAITING_REAUTHORIZATION` until the exact approved `REAUTHORIZE` decision for release B was present.
+- The owner created and attached the release-B Privy policy and aggregation. The new delegated 2 wei action succeeded before the ENS approved-state update was written.
+- Only after the new Privy authority succeeded did the company-controlled resolver update the four protected records. Universal Resolver v2 readback confirmed release B and its new `permissionHash`, and the active installation advanced to generation 1.
+- The live T12 policy, aggregation, transaction, ENS writes, and readback are recorded in `evidence/lifecycle/t11-t13-latest.json`.
+- Local lifecycle tests retain the old active state until the new authority and ENS state are configured. A provider-failure rollback attempt was not run as an additional live mutation and remains a follow-up risk for the API implementation.
+
+Acceptance:
+
+- [x] Expanded authority cannot activate without exact human reauthorization.
+- [x] Privy authority is updated before ENS approved-state records.
+- [x] The new permission hash is bound to the new release and generation.
+- [x] The approved update succeeds through the verified stateful signing path.
+- [x] Unsupported or failed authority changes remain fail closed in the local contract.
+
+### T13 - Combined revoke lifecycle
+
+Status: DONE, live Sepolia proof passed
+
+- The owner-approved revoke decision moved the active installation into `REVOKING`.
+- Owner control removed the delegated signer from the Privy wallet. Wallet readback showed zero additional signers, and a later delegated signing attempt failed with HTTP `401`.
+- The authorized ENS resolver writer changed only `kanon.status` to `revoked`. The name and historical identity records remained resolvable.
+- A representative agent owner attempted to restore `kanon.status=approved` and was rejected by the Permissioned Resolver. The final Universal Resolver v2 readback remained revoked.
+- Policies and aggregations created for T11 and T12 were removed with owner-authorized operations. Evidence is recorded in `evidence/lifecycle/t11-t13-latest.json`.
+
+Acceptance:
+
+- [x] Delegated Privy authority is removed before the revoked installation is finalized.
+- [x] Post-revoke delegated execution fails.
+- [x] ENS resolves the persistent agent name with `kanon.status=revoked`.
+- [x] The agent cannot restore protected ENS records.
+- [x] No mainnet or production ENS write was performed.
+
+### T14 - Backend/API contract freeze
+
+Status: DONE, contract freeze passed
+
+- `packages/shared/src/api-contracts.ts` freezes API contract version 1, company-authenticated `/v1` routes, success and fail-closed error envelopes, and stable request/resource types.
+- The contract covers organization, wallet, ENS identity, agent capability, company terms, approval, active Privy authority, execution and revocation evidence, update diff, and revoke resources.
+- Wallet and authority projections expose scoped public identifiers only. Private keys, secrets, owner credentials, owner quorum material, and policy-management authority are excluded.
+- Active authority requires matching Privy and ENS generation, permission hash, and normal ENS readback. Update and revoke resources require matching proposal and decision evidence.
+- No API server, frontend UI, layout, typography, component, dashboard, animation, or visual design work was added.
+
+Acceptance:
+
+- [x] Frontend can later consume stable domain data without changing core lifecycle behavior.
+- [x] API contracts preserve human approval, Privy authority, ENS identity, evidence, update, and revoke boundaries.
+- [x] Mismatched authority, readback, update, and revoke evidence fails closed.
+- [x] Contract tests cover the versioned route surface, secret boundary, active authority, update, revoke, evidence, and error envelopes.
+
+## Final verification checkpoint
+
+Status: T11, T12, T13, and T14 complete. The working tree remains intentionally uncommitted on local `main`, with no remote configured. `.env.local` is ignored and no secret value is tracked. The live lifecycle evidence is in `evidence/lifecycle/t11-t13-latest.json`. T14 contract evidence is in `tests/api-contracts.t14.test.ts`.
+
+- Node.js `22.23.2`, pnpm `11.5.0`, TypeScript `5.9.2`, ESLint `9.35.0`, Vitest `3.2.4`, and Prettier `3.6.2` are selected.
+- `pnpm install --frozen-lockfile`: passed across all 7 workspace projects.
+- `pnpm typecheck`: passed.
+- `pnpm test`: passed, 9 files and 58 tests.
+- `pnpm lint`: passed.
+- `pnpm format:check`: passed.
+- `git diff --check`: passed.
+- Official Privy MCP, official Privy Agent Skill, Privy machine-readable fallback docs, ENS machine-readable docs, and Context7 `/ensdomains/docs` remain configured and verified.
+- No frontend design or implementation was added. No mainnet or production ENS write was performed.
 
 ### T1A - Minimal agent/domain contract
 
@@ -108,7 +282,7 @@ Implemented in `packages/permissions/src/index.ts` and covered by `tests/permiss
 - `permissionHash` is `sha256:` plus lowercase hexadecimal SHA-256 over canonical UTF-8 JSON of final company terms only;
 - release identity, package and manifest hashes, wallet identity, signer identity, policy IDs, aggregation IDs, and transaction IDs remain separate binding inputs;
 - token assets, request-count limits, arbitrary conditions, and ambiguous inputs fail closed;
-- the future compiler must emit only `eth_signTransaction` and `eth_sendTransaction` and reject unsupported conditions.
+- the compiler must accept one explicit execution method per plan. It emits only that method and rejects unsupported method and authority combinations.
 
 ### T2 - Permission diff engine
 
@@ -150,13 +324,28 @@ Current evidence:
 
 ### T5 - Privy policy compiler
 
-Status: TODO, NEXT
+Status: DONE, GATE PASSED
 
-- compile only the final `CompanyAuthorityTerms` grammar into Privy policy conditions;
+- compile only the final `CompanyAuthorityTerms` grammar into method-specific Privy policy conditions;
+- require an explicit `eth_sendTransaction` or `eth_signTransaction` compiler input and emit one method per plan;
 - attach signer-specific overrides without granting owner-level authority;
-- use stateful aggregation only for selected rolling-value limits;
-- reject token assets, request-count limits, arbitrary conditions, ambiguous ABI inputs, and every unsupported field;
-- fail closed when a policy cannot faithfully represent the normalized permission set.
+- use owner-controlled stateful aggregation only for rolling-value limits on `eth_signTransaction`;
+- broadcast signed transactions separately when the stateful path is selected;
+- reject rolling limits on `eth_sendTransaction`, missing aggregation IDs, token assets, request-count limits, arbitrary conditions, ambiguous ABI inputs, and every unsupported field;
+- fail closed when a policy cannot faithfully represent the normalized permission set, with no application-only fallback.
+
+T5 verification:
+
+- `eth_sendTransaction` stateless compilation passes for chain, recipient, native value, calldata, and validity conditions;
+- `eth_signTransaction` stateful compilation passes with an explicit aggregation reference and deterministic aggregation requirement;
+- rolling authority plus `eth_sendTransaction` fails with `UNSUPPORTED_POLICY_COMBINATION`;
+- missing aggregation IDs, forged permission hashes, and ambiguous ABI types fail closed;
+- `pnpm typecheck` passes and `pnpm test` passes with 6 files and 43 tests.
+- `pnpm spike:privy:compiler` passes against the live Sepolia Privy wallet. Evidence is recorded in `evidence/privy/t5-compiler-latest.json`.
+- `pnpm spike:ens:t7` passes against the live Sepolia ENSv2 hierarchy. Evidence is recorded in `evidence/ens/t7-adapter-latest.json`.
+- `pnpm spike:lifecycle:t8-t10` passes the local installation, approval, update-gating, and isolated-runner proof. Evidence is recorded in `evidence/lifecycle/t8-t10-latest.json`.
+
+- T11, T12, and T13 are complete against the live Sepolia fixtures. T11 allowed execution, T12 required and completed exact reauthorization before the expanded authority and ENS update, and T13 removed the signer, proved post-revoke rejection, resolved ENS as revoked, and rejected an unauthorized restore. Evidence is recorded in `evidence/lifecycle/t11-t13-latest.json`.
 
 ## Never cut
 
@@ -168,4 +357,4 @@ T15 is blocked by owner design. Do not invent layout, typography, components, da
 
 ## Next action
 
-Begin T5. Implement the Privy policy compiler against the final authority grammar and T2 diff contract. It must reject unsupported conditions and never emit broader authority than the normalized permission set. Keep the ENSv2 spike and frontend work behind their ordered gates.
+T11, T12, T13, and T14 are complete. The exact next action is T15, wait for the owner product-design handoff. Keep the frontend untouched until that design is supplied, and keep all ENS work on the authorized Sepolia namespace only.

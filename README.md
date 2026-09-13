@@ -4,7 +4,7 @@ Kanon is a business agent-control runtime for company-deployed financial AI agen
 
 The core promise is simple: an agent receives exactly the authority a human approves, and a software update cannot silently widen that authority.
 
-This checkout has completed environment setup, the sponsor-independent T1A domain foundation, the live Privy feasibility spike, T1B final authority normalization, and T2 permission diffing. The Privy policy compiler, ENSv2 writes, API, and frontend implementation remain gated by the ordered build plan.
+This checkout has completed environment setup, the sponsor-independent T1A domain foundation, the live Privy feasibility spike, T1B final authority normalization, T2 permission diffing, the execution-method-aware Privy policy compiler, the authorized Sepolia ENSv2 proof, the ENS identity adapter, the T8 to T10 installation and runner boundaries, the live T11 to T13 activation, update, and revoke proof, and the T14 backend/API contract freeze. The API server and frontend implementation remain gated by the ordered build plan.
 
 ## Canonical documentation
 

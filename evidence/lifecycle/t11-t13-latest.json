@@ -1,0 +1,118 @@
+{
+  "milestone": "T11-T13",
+  "status": "passed",
+  "recordedAt": "2026-09-12T18:05:21.043Z",
+  "network": {
+    "name": "Ethereum Sepolia",
+    "chainId": 11155111
+  },
+  "resources": {
+    "walletId": "daw18yxziq98ljz1t2hricvu",
+    "walletAddress": "0x42D5Fb257d479187607D47C19433Be6aEEd4a9A9",
+    "ownerKeyQuorumId": "qnvqwminvphhhpjfn8d2xm1x",
+    "delegatedSignerId": "sg2lc6vqtl2a7s2ibv7f2ca0",
+    "ensName": "representative-agent.agents.kanon-ethonline-2026.eth",
+    "ensResolver": "0x0D4560DaFEb04Cf022472B5085070A05E0d77e0B"
+  },
+  "t11": {
+    "status": "passed",
+    "releaseId": "release-t6-ethonline-2026",
+    "packageHash": "sha256:56b96d50aec66f6c687cc56ed54f8b408a4a38fc6e10c697106c67c3791ec1cd",
+    "manifestHash": "sha256:3b9f5001025a9a7ab6dd80bf17516d55e04cb3c7e918731405c9c7f09c1d6a7a",
+    "permissionHash": "sha256:7171a1991636a5923a86991b8b9f284b9a5a5082458645a05d7f69f0f0eed56b",
+    "policyId": "mstlwf1g162uca2ytmpi90ra",
+    "aggregationId": "e4v22px3tkg4vaywbxynlfti",
+    "humanDecisionId": "decision-t11-approve",
+    "installationStatus": "ACTIVE",
+    "delegatedSignerAttached": true,
+    "ensReadback": {
+      "kanon.agentId": "com.example.treasury",
+      "kanon.release": "release-t6-ethonline-2026",
+      "kanon.permissionHash": "sha256:7171a1991636a5923a86991b8b9f284b9a5a5082458645a05d7f69f0f0eed56b",
+      "kanon.status": "approved"
+    },
+    "allowedExecution": {
+      "schema": "kanon.execution-evidence",
+      "version": 1,
+      "installationId": "installation-t11-live",
+      "generation": 0,
+      "permissionHash": "sha256:7171a1991636a5923a86991b8b9f284b9a5a5082458645a05d7f69f0f0eed56b",
+      "executionMethod": "eth_signTransaction",
+      "outcome": "SUCCEEDED",
+      "transactionHash": "0x8f52bcb5cc5403237c5b7d20e98b22d4b2cf78058df1fd74266cdfc0772eaa97",
+      "recordedAt": "2026-09-12T18:03:53.037Z"
+    }
+  },
+  "t12": {
+    "status": "passed",
+    "releaseId": "release-t12-expanded-ethonline-2026",
+    "packageHash": "sha256:8c434023dbc035910b8d3a052b558eb4bc347dbead8087072c54227ee4bba34d",
+    "manifestHash": "sha256:c0abd1fd16081cb090dce81b095c44b900b7bbb3f30e75420af199ad5ec93016",
+    "permissionHash": "sha256:03addc680f02084339b8274161a478bd360518ae485de631d50b203b5094b4ff",
+    "classification": "EXPANDED",
+    "requiresHumanReview": true,
+    "changedPaths": [
+      "companyTerms.authority.rules[0].maxValueWei",
+      "companyTerms.authority.rules[0].rollingSpend.maxValueWei"
+    ],
+    "humanDecisionId": "decision-t12-reauthorize",
+    "policyId": "x80kbha3z5w3m3ok2mf0rni5",
+    "aggregationId": "l0vgbfhvar7ydh37sip815qv",
+    "directDelegatedExecution": {
+      "outcome": "SUCCEEDED",
+      "transactionHash": "0x5d6cb2f2e034df92d05f0304d53bf672ee422be994f5e7412182ef95aa8e1cdd"
+    },
+    "ensWrites": [
+      "0x97deb5573d406a7a14664f78aad0eb0d47673d8632bbfe47896a5d465b62c78a",
+      "0x05c5b6a2de9760377ac623c70a75dc657d03afbd721d5a7cbefa6d8b761a8830",
+      "0x592c052fc463df7df7c7d74d8f7084a602ac94f783cfc19fecd5f92a24660884",
+      "0xa127c6ca9e4d5b096c7431c70407d8bd2d0b998c4365ce956274423aa1125a17"
+    ],
+    "ensReadback": {
+      "kanon.agentId": "com.example.treasury",
+      "kanon.release": "release-t12-expanded-ethonline-2026",
+      "kanon.permissionHash": "sha256:03addc680f02084339b8274161a478bd360518ae485de631d50b203b5094b4ff",
+      "kanon.status": "approved"
+    },
+    "activeGeneration": 1
+  },
+  "t13": {
+    "status": "passed",
+    "humanDecisionId": "decision-t13-revoke",
+    "signerCountAfterRevoke": 0,
+    "postRevokeExecution": {
+      "schema": "kanon.execution-evidence",
+      "version": 1,
+      "installationId": "installation-t11-live",
+      "generation": 1,
+      "permissionHash": "sha256:03addc680f02084339b8274161a478bd360518ae485de631d50b203b5094b4ff",
+      "executionMethod": "eth_signTransaction",
+      "outcome": "REJECTED",
+      "rejectionCode": "privy_rejected_401",
+      "recordedAt": "2026-09-12T18:05:08.606Z"
+    },
+    "ensWrites": [
+      "0x597122cf09620ccab0551b5027fde860015ce8974cbb84d2fda159f50d3be7ca"
+    ],
+    "ensReadback": {
+      "kanon.agentId": "com.example.treasury",
+      "kanon.release": "release-t12-expanded-ethonline-2026",
+      "kanon.permissionHash": "sha256:03addc680f02084339b8274161a478bd360518ae485de631d50b203b5094b4ff",
+      "kanon.status": "revoked"
+    },
+    "unauthorizedWriter": "0x42D5Fb257d479187607D47C19433Be6aEEd4a9A9",
+    "unauthorizedRestoreRejected": true,
+    "installationStatus": "REVOKED"
+  },
+  "cleanup": {
+    "policyADeleted": true,
+    "aggregationADeleted": true,
+    "policyBDeleted": true,
+    "aggregationBDeleted": true
+  },
+  "security": {
+    "companyTermsPublishedToEns": false,
+    "ownerCredentialPassedToRunnerContext": false,
+    "mainnetWrite": false
+  }
+}

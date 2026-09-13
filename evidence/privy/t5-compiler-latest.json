@@ -1,0 +1,53 @@
+{
+  "status": "passed",
+  "recordedAt": "2026-09-12T15:33:49.703Z",
+  "chainId": 11155111,
+  "execution": {
+    "statelessSend": {
+      "method": "eth_sendTransaction",
+      "policyId": "ca0b0faldruqbd20jqpaurm0",
+      "forbiddenSend": {
+        "ok": false,
+        "mode": "send",
+        "method": "eth_sendTransaction",
+        "error": {
+          "name": "Error",
+          "status": 400,
+          "message": "code=policy_violation"
+        }
+      }
+    },
+    "statefulSign": {
+      "method": "eth_signTransaction",
+      "policyId": "zh1kcpa4171g52n1wisgqt6u",
+      "aggregationId": "rh0wquh742roem7799n1r5rb",
+      "firstSigning": {
+        "ok": true,
+        "mode": "sign",
+        "method": "eth_signTransaction",
+        "signedTransaction": true
+      },
+      "subsequentSigning": {
+        "ok": false,
+        "mode": "sign",
+        "method": "eth_signTransaction",
+        "error": {
+          "name": "Error",
+          "status": 400,
+          "message": "code=policy_violation"
+        }
+      }
+    }
+  },
+  "compiler": {
+    "statelessPermissionHash": "sha256:135583b46cd09903ddf0f6bd5a5a70c7d3b6e94c5c9352389c6e9c88a7c18c29",
+    "statefulPermissionHash": "sha256:7171a1991636a5923a86991b8b9f284b9a5a5082458645a05d7f69f0f0eed56b",
+    "statefulAggregationRequirementCount": 1
+  },
+  "references": [
+    "https://docs.privy.io/controls/policies/overview",
+    "https://docs.privy.io/controls/policies/stateful-policies",
+    "https://docs.privy.io/api-reference/aggregations/create",
+    "https://docs.privy.io/controls/authorization-keys/using-owners/overview"
+  ]
+}

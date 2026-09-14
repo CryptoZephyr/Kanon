@@ -266,6 +266,16 @@ async function saveAndRenderInstallation(
   installation: Installation,
 ) {
   await database.saveInstallation(installation);
+  if (installation.status === "ACTIVE" && installation.ens) {
+    const evidence = (await database.getEvidence(installation.id)).map(
+      evidenceResource,
+    );
+    return createInstallationResource({
+      installation,
+      ensReadback: ensReadback(installation.ens),
+      evidence,
+    });
+  }
   return installationResource(database, installation);
 }
 

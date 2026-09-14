@@ -1,0 +1,40 @@
+{
+  "schema": "kanon.evidence.frontend-lifecycle",
+  "version": 1,
+  "recordedAt": "2026-09-14T11:16:43.4510773Z",
+  "environment": {
+    "apiBaseUrl": "https://kanon-api.onrender.com",
+    "runnerBaseUrl": "https://kanon-runner.onrender.com",
+    "chainId": 11155111,
+    "ensNamespace": "kanon-ethonline-2026.eth"
+  },
+  "installationId": "installation-release-web-live-20260914-f",
+  "approvalBoundary": {
+    "initialApprovalHttp": 202,
+    "reauthorizationHttp": 202,
+    "pollingRequired": true
+  },
+  "initialActivation": {
+    "status": "ACTIVE",
+    "generation": 0
+  },
+  "update": {
+    "classification": "EXPANDED",
+    "requiresHumanReview": true,
+    "statusAfterReauthorization": "ACTIVE",
+    "generation": 1
+  },
+  "revocation": {
+    "installationStatus": "REVOKED",
+    "ensStatus": "revoked",
+    "privyAuthorityRevoked": true,
+    "postRevokeExecutionFailed": true,
+    "activeAuthorityPresent": false,
+    "generation": 2
+  },
+  "notes": [
+    "Temporary Sepolia proof installation created through the deployed API.",
+    "The approval endpoint returns 202 while Privy and ENS configuration runs asynchronously.",
+    "No secret, private key, owner credential, or company token is recorded in this evidence."
+  ]
+}

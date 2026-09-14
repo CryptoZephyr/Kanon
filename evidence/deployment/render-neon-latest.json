@@ -1,14 +1,14 @@
 {
   "schema": "kanon.deployment-proof",
   "version": 1,
-  "recordedAt": "2026-09-13T03:05:41.061Z",
+  "recordedAt": "2026-09-14T11:34:23.4858223Z",
   "cost": "free",
   "repository": {
     "url": "https://github.com/CryptoZephyr/Kanon",
     "visibility": "private",
-    "proofCommit": "40b6d88c1f32601c7a5c62b7cfb0ea7e00ecb90a",
-    "currentCommit": "d5a4c780f8cb68261dcc06bce4b13750233fdeab",
-    "frontendTouched": false
+    "proofCommit": "85c743459a70983a7803e7d30706795420a0efc2",
+    "currentCommit": "85c743459a70983a7803e7d30706795420a0efc2",
+    "frontendTouched": true
   },
   "render": {
     "region": "frankfurt",
@@ -19,14 +19,14 @@
     "api": {
       "serviceId": "srv-daj103tg1s2s7391ov3g",
       "url": "https://kanon-api.onrender.com",
-      "proofDeploymentId": "dep-daj1ag8jo6nc73c13gmg",
+      "proofDeploymentId": "dep-dajt9kojo6nc73cn9jqg",
       "health": "ok",
       "database": "ok"
     },
     "runner": {
       "serviceId": "srv-daj102fqj5pc73bs02r0",
       "url": "https://kanon-runner.onrender.com",
-      "proofDeploymentId": "dep-daj1ag8jo6nc73c13geg",
+      "proofDeploymentId": "dep-dajt9kojo6nc73cn9jhg",
       "health": "ok",
       "database": "ok"
     },
@@ -109,11 +109,20 @@
       "privyAggregationsDeleted": true
     }
   },
+  "frontend": {
+    "implementation": "apps/web",
+    "approvedLogo": "apps/web/public/kanon-approved-logo.svg",
+    "screenCount": 6,
+    "liveLifecycleEvidence": "evidence/frontend/t15-live-latest.json",
+    "approvalHttpStatus": 202,
+    "reauthorizationHttpStatus": 202,
+    "asyncPolling": true
+  },
   "security": {
     "mainnetWrite": false,
     "secretsRecorded": false,
     "ownerCredentialPassedToRunner": false,
     "companyTermsPublishedToEns": false,
-    "frontendTouched": false
+    "frontendTouched": true
   }
 }

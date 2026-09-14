@@ -54,7 +54,7 @@ The owner has resolved the build-order dependency. The detailed sequence is:
 12. T12 - Permission-aware update.
 13. T13 - Combined revoke lifecycle.
 14. T14 - Backend and API contract freeze.
-15. T15 - Owner frontend product-design handoff.
+15. T15 - Owner frontend product-design handoff and implementation.
 16. T16 - Public backend deployment.
 17. T17 - Demo rehearsal and evidence freeze.
 18. T18 - Submission artifacts.
@@ -232,16 +232,36 @@ Acceptance:
 - [x] Mismatched authority, readback, update, and revoke evidence fails closed.
 - [x] Contract tests cover the versioned route surface, secret boundary, active authority, update, revoke, evidence, and error envelopes.
 
+### T15 - Frontend implementation and live lifecycle connection
+
+Status: DONE, approved frontend and deployed API lifecycle proof passed
+
+- The special landing page, exact approved logo, and six approved application screens are implemented in `apps/web` from the canonical owner handoff.
+- The implementation keeps the approved Field / Structure / Signal hierarchy, responsive comparison behavior, accessible native controls, and reduced-motion behavior. No extra screen or product-design system was added.
+- `apps/web/src/api.ts` uses the frozen company-authenticated API contract. The Vite development proxy attaches `KANON_COMPANY_API_TOKEN` only in the server-side development process. The browser never receives that token.
+- Approval and reauthorization return HTTP `202` while Privy and ENS authority configuration runs asynchronously. The client polls the installation and enters the active detail view only after the API reports `ACTIVE`.
+- Live proof installation `installation-release-web-live-20260914-f` reached `ACTIVE` at generation 0, classified the release and authority expansion as `EXPANDED` with `requiresHumanReview: true`, reached `ACTIVE` at generation 1 after `REAUTHORIZE`, and reached `REVOKED` after signer removal, ENS revoked readback, and failed post-revoke delegated execution.
+- Non-secret evidence is recorded in `evidence/frontend/t15-live-latest.json`.
+
+Acceptance:
+
+- [x] The approved landing page and six screens are implemented without adding product-design decisions.
+- [x] The frontend reads live API health and proof state through the server-side proxy.
+- [x] Create, authority, approval, active activation, update, reauthorization, and revoke calls use the deployed API routes.
+- [x] Async authority configuration is polled and does not claim `ACTIVE` from the initial `202` response.
+- [x] The company token remains server-side and no secret is committed.
+- [x] The live create to revoke flow passes against Render, Neon, Privy, ENSv2, and the isolated runner.
+
 ### T16 - Public backend deployment
 
 Status: DONE, owner-authorized Render and Neon deployment with live lifecycle proof
 
-The owner directed this deployment before the documented T15 frontend-design gate. Frontend work remains untouched.
+The owner directed this deployment before the frontend implementation pass. The deployment now serves the frozen API route surface used by T15.
 
 - GitHub repository `https://github.com/CryptoZephyr/Kanon` is private and was created and pushed with GitHub CLI.
 - Neon free project `kanon-ethonline-2026` uses PostgreSQL 18 in `aws-eu-central-1`, database `kanon`, branch `br-spring-block-b2xd3rlk`. The existing migration passed.
-- Render free service `kanon-api` is live at `https://kanon-api.onrender.com`, service ID `srv-daj103tg1s2s7391ov3g`. The proof deployment was `dep-daj1ag8jo6nc73c13gmg`.
-- Render free service `kanon-runner` is live at `https://kanon-runner.onrender.com`, service ID `srv-daj102fqj5pc73bs02r0`. The proof deployment was `dep-daj1ag8jo6nc73c13geg`.
+- Render free service `kanon-api` is live at `https://kanon-api.onrender.com`, service ID `srv-daj103tg1s2s7391ov3g`, latest live deployment `dep-dajt9kojo6nc73cn9jqg` from commit `85c7434`.
+- Render free service `kanon-runner` is live at `https://kanon-runner.onrender.com`, service ID `srv-daj102fqj5pc73bs02r0`, latest live deployment `dep-dajt9kojo6nc73cn9jhg` from commit `85c7434`.
 - Both services use Node.js `22.23.2`, pnpm `11.5.0`, one free instance in Frankfurt, and reach Neon successfully through TLS.
 - The runner is public because of the Render free-service topology. Its internal endpoint requires the application shared secret. Owner and ENS control credentials remain API-only, and the runner receives delegated execution material only.
 - The API rejected an unauthenticated proof start with HTTP `401` and accepted a company-authenticated start with HTTP `202`.
@@ -255,11 +275,11 @@ Acceptance:
 - [x] Secrets are stored in provider environment variables only and are absent from the repository.
 - [x] Privy and ENSv2 are reachable from the deployed API path.
 - [x] The deployed lifecycle proof covers allowed execution, forbidden rejection, human-gated expansion, Privy-before-ENS update, revoke, post-revoke failure, and unauthorized ENS restore rejection.
-- [x] No paid upgrade, mainnet ENS write, or frontend change was made.
+- [x] No paid upgrade or mainnet ENS write was made.
 
 ## Final verification checkpoint
 
-Status: T11, T12, T13, T14, and the owner-authorized T16 deployment complete. The repository is on private GitHub remote `https://github.com/CryptoZephyr/Kanon` on branch `main`. `.env.local` is ignored and no secret value is tracked. The live lifecycle evidence is in `evidence/lifecycle/t11-t13-latest.json`, and the deployed proof summary is in `evidence/deployment/render-neon-latest.json`. T14 contract evidence is in `tests/api-contracts.t14.test.ts`.
+Status: T11, T12, T13, T14, T15, and the owner-authorized T16 deployment complete. The repository is on private GitHub remote `https://github.com/CryptoZephyr/Kanon` on branch `main`. `.env.local` is ignored and no secret value is tracked. The live lifecycle evidence is in `evidence/lifecycle/t11-t13-latest.json`, the frontend lifecycle evidence is in `evidence/frontend/t15-live-latest.json`, and the deployed proof summary is in `evidence/deployment/render-neon-latest.json`. T14 contract evidence is in `tests/api-contracts.t14.test.ts`.
 
 - Node.js `22.23.2`, pnpm `11.5.0`, TypeScript `5.9.2`, ESLint `9.35.0`, Vitest `3.2.4`, and Prettier `3.6.2` are selected.
 - `pnpm install --frozen-lockfile`: passed across all 7 workspace projects.
@@ -270,12 +290,12 @@ Status: T11, T12, T13, T14, and the owner-authorized T16 deployment complete. Th
 - `git diff --check`: passed.
 - Official Privy MCP, official Privy Agent Skill, Privy machine-readable fallback docs, ENS machine-readable docs, and Context7 `/ensdomains/docs` remain configured and verified.
 - Render service health, Neon migration, private GitHub visibility, API authentication, and the remote lifecycle proof passed. Full deployment identifiers and evidence are in `evidence/deployment/render-neon-latest.json`.
-- No frontend design or implementation was added. No mainnet or production ENS write was performed.
+- The approved frontend implementation and live API lifecycle connection are complete. No mainnet or production ENS write was performed.
 
 Deployment risk and sequence note:
 
 - The first remote proof failed closed because the persistent ENS fixture was already revoked. The existing T6 setup probe restored the exact approved baseline before the successful run. Future proof runs need an explicit owner-authorized baseline reset before starting.
-- The current documented list places T15 before T16, while this owner-authorized deployment was completed ahead of that order. Review the numbering before T17 planning. T15 remains the exact next action and the frontend stays untouched.
+- The backend deployment occurred before the owner frontend handoff, but both T15 and T16 are now complete. T17 is the next milestone.
 
 ### T1A - Minimal agent/domain contract
 
@@ -386,8 +406,8 @@ Deterministic authority hashing, human approval, real Privy wallet control, rest
 
 T15 owner design is approved in the canonical [FRONTEND.md](https://app.notion.com/p/3d8c5381831281e781e7cc5c72c4c9db) handoff. The implementation pass now contains the special landing page, exact approved logo asset, six approved screens, responsive Field / Structure / Signal styling, accessible controls, reduced-motion behavior, and a typed frontend client for the frozen API routes.
 
-The deployed API currently serves health and proof routes. The frozen organization, agent, installation, company-terms, approval, update-diff, evidence, and revoke routes return 404 from `https://kanon-api.onrender.com`. The frontend keeps these calls typed and fail-closed. Do not expose `KANON_COMPANY_API_TOKEN` in browser code, add a browser-side fallback authority model, or silently replace the missing routes with local-only product behavior.
+The deployed API serves the frozen organization, agent, installation, company-terms, approval, update-diff, evidence, and revoke routes in addition to health and proof. Approval and reauthorization are asynchronous. The frontend keeps the company token server-side, polls configuration state, and remains fail-closed if authority does not reach `ACTIVE`. Do not add a browser-side authority fallback or silently replace the live lifecycle with local-only product behavior.
 
 ## Next action
 
-T15 visual implementation is in progress from the approved owner handoff. The exact blocker is the missing deployed API route implementation required for the full create, authority, approval, active, update, reauthorization, and revoke flow. Keep the frontend design locked, keep the company token server-side, and implement the already-frozen API route surface before claiming end-to-end completion.
+T15 and T16 are complete. Proceed to T17 demo rehearsal and evidence freeze. Warm the free Render services before the demo, use the authorized Sepolia namespace only, and keep the frontend company token boundary unchanged.

@@ -6,4 +6,4 @@ Kanon helps businesses automate financial operations with AI agents without givi
 
 The direct user is a business or organization operating one or more financially capable agents. The representative flow is agent declaration, company terms, deterministic permission compilation, human approval, restricted Privy signer activation, ENSv2 identity binding, autonomous allowed execution, rejected out-of-policy execution, permission-aware update review, synchronized reauthorization, and revoke.
 
-The manifest requests capability. It never grants authority. ENSv2 represents identity and approved public state. Privy is the financial enforcement plane. Expanded, substituted, or unknown authority changes require human review. The frontend is deferred until owner product design is supplied.
+The manifest requests capability. It never grants authority. ENSv2 represents identity and approved public state. Privy is the financial enforcement plane. Expanded, substituted, or unknown authority changes require human review. The frontend was started only after the owner product-design handoff and is now implemented and connected to the verified lifecycle boundary.

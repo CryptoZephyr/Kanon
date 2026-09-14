@@ -15,3 +15,17 @@ The installation lifecycle binds the human decision, release identity, `permissi
 T14 through T16 keep the backend/API and frontend inside the same boundary. Versioned resources expose only public or scoped identifiers and verified state. Wallet resources contain no private key, secret, owner credential, or quorum material. Active authority construction requires matching Privy and ENS generation, permission hash, and ENS readback. Update and revoke resources reject evidence that does not match the approved proposal or decision. The browser receives no company token. These contracts describe data and failure modes. They do not grant authority or replace Privy and ENS enforcement.
 
 No secret, authorization key, seed phrase, or owner credential belongs in source control, frontend responses, logs, analytics, or ordinary database fields.
+
+## Reporting a vulnerability
+
+Do not open a public issue for a suspected security problem. Use the repository owner's GitHub profile to request a private report or use GitHub's private vulnerability reporting when it is enabled for the repository. Include only the minimum reproduction details needed to triage the issue. Never include private keys, seed phrases, provider secrets, authorization keys, or company tokens in a report.
+
+## Scope
+
+In scope are the delegated Privy authority boundary, policy compilation, runner isolation, company-authenticated API routes, server-side token handling, ENSv2 protected-record permissions, lifecycle binding, and fail-closed behavior.
+
+Out of scope are third-party Privy or ENS infrastructure, the security of the user's own wallet or operating system, unrelated hosted services, and attacks that require disclosure of a secret that the user stored outside this repository.
+
+## Prototype limits
+
+Kanon is a hackathon and Ethereum Sepolia testnet proof. It has not received an independent security audit and is not a production custody or financial-operations deployment. ENSv2 beta interfaces, Privy policy behavior, free-tier hosting, provider availability, and testnet state can change. No mainnet ENS write is authorized by this repository.

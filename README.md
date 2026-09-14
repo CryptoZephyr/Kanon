@@ -4,52 +4,79 @@ Kanon is a business agent-control runtime for company-deployed financial AI agen
 
 The core promise is simple: an agent receives exactly the authority a human approves, and a software update cannot silently widen that authority.
 
-This checkout has completed environment setup, the sponsor-independent T1A domain foundation, the live Privy feasibility spike, T1B final authority normalization, T2 permission diffing, the execution-method-aware Privy policy compiler, the authorized Sepolia ENSv2 proof, the ENS identity adapter, the T8 to T10 installation and runner boundaries, the live T11 to T13 activation, update, and revoke proof, the T14 backend/API contract freeze, the approved T15 frontend implementation, and the owner-authorized T16 deployment. The frontend reads the deployed API through a server-side development proxy. The complete create, authority, approval, active, update, reauthorization, and revoke flow has passed against Render, Neon, Privy, ENSv2, and the isolated runner.
+[Live demo](https://kanon-agents.vercel.app) · [Deployment record](DEPLOYMENT.md) · [Submission brief](docs/submission.md) · [Implementation status](docs/implementation-status.md) · [Security boundary](SECURITY.md)
 
-## Canonical documentation
+## Problem
 
-The live Kanon documentation is maintained in the [Kanon Notion workspace](https://app.notion.com/p/3cac5381831281e3951beffb5758a9c4). The local operational records are:
+Financial agents need enough wallet authority to act without a human signing every transaction. Broad wallet credentials create a second risk. A software update can also request more authority than the company approved for the original release.
 
-- [Handoff.md](Handoff.md)
-- [Tasks.md](Tasks.md)
-- [Build.md](Build.md)
-- [DEPLOYMENT.md](DEPLOYMENT.md)
-- [AI_TOOLING.md](AI_TOOLING.md)
-- [FRONTEND.md](FRONTEND.md)
+Kanon gives the company a durable identity and an enforceable authority boundary for each agent release. Human approval stays attached to the exact normalized authority, release, package, and manifest identity.
 
-The Notion pages remain authoritative when a local pointer and the live page differ.
+## How it works
 
-## Repository shape
+1. An agent release declares the capabilities it requests. The declaration never grants authority.
+2. The company defines the operating terms that it is willing to grant.
+3. Kanon normalizes those terms and computes a deterministic `permissionHash`.
+4. A human approves the exact release and authority before activation.
+5. Privy controls a delegated signer with the verified policy for the selected execution method.
+6. ENSv2 records the company-controlled agent identity and approved public state under the Sepolia organization namespace.
+7. Allowed actions execute through the delegated path. Forbidden actions are rejected by the policy path.
+8. A broader, substituted, or unknown release waits for explicit reauthorization. Revocation removes delegated authority before the ENS status changes to `revoked`.
+
+## Load-bearing integrations
+
+Privy is the financial enforcement plane. The business wallet remains owner-controlled. The agent receives a separate signer and a signer-specific policy. Stateless restrictions are supported on `eth_sendTransaction`. Rolling native-value limits use the verified `eth_signTransaction` path with a Privy aggregation, then broadcast the signed transaction separately.
+
+ENSv2 is the company-controlled identity and namespace plane. The ETHOnline proof uses the Sepolia hierarchy `kanon-ethonline-2026.eth`, `agents.kanon-ethonline-2026.eth`, and `representative-agent.agents.kanon-ethonline-2026.eth`. Protected records expose `kanon.agentId`, `kanon.release`, `kanon.permissionHash`, and `kanon.status`. ENSv2 records identity and approved public state. Privy enforces financial authority.
+
+## Verified scope
+
+The live proof is testnet-only and uses Ethereum Sepolia, chain ID `11155111`.
+
+- The deployed frontend is live at [kanon-agents.vercel.app](https://kanon-agents.vercel.app).
+- The live browser rehearsals completed create, company terms, human approval, Privy and ENS binding, allowed execution, forbidden rejection, update reauthorization, and revoke.
+- The deployed T11 to T13 proof passed allowed execution, forbidden policy rejection, blocked pre-reauthorization expansion, Privy-first update ordering, signer removal, ENS revoked state, post-revoke failure, and unauthorized ENS restore rejection.
+- Non-secret evidence is recorded in [evidence/deployment/t17-live-latest.json](evidence/deployment/t17-live-latest.json), [evidence/lifecycle/t11-t13-latest.json](evidence/lifecycle/t11-t13-latest.json), and [evidence/ens/t6-write-latest.json](evidence/ens/t6-write-latest.json).
+
+The requested `kanon.agents.vercel.app` hostname is reserved for another Vercel account. The verified default alias is the live entry point.
+
+## Clean checkout
+
+Requirements: Node.js `22.23.2` and pnpm `11.5.0`.
 
 ```text
-apps/
-  web/
-  runner/
-packages/
-  manifest/
-  permissions/
-  privy/
-  ens/
-  shared/
-examples/
-  agents/
-```
-
-## Baseline
-
-The project is pinned to Node.js 22.23.2 and pnpm 11.5.0. From a clean checkout, use a Node.js 22 runtime and run:
-
-```text
-
-For the approved frontend, run `pnpm dev:web`. The Vite proxy targets the deployed API and attaches `KANON_COMPANY_API_TOKEN` only in the server-side development process. Approval and reauthorization return `202` while authority configuration runs, so the client polls until the installation settles. Never expose that value through a `VITE_` variable or committed file.
-pnpm install
+pnpm install --frozen-lockfile
 pnpm typecheck
 pnpm test
 pnpm lint
+pnpm format:check
+pnpm build:web
 ```
 
-No real secrets belong in this repository. Copy the names in `.env.example` into an ignored local secret source only when a later implementation task requires them.
+These commands run without sponsor credentials. Copy variable names from [.env.example](.env.example) only into an ignored local secret source when running provider-backed probes or a locally authenticated deployment. Never put private keys, provider secrets, or the company API token in browser variables, source control, logs, or public evidence.
 
-## Frontend
+The hosted demo is the simplest way to inspect the product. A local frontend can be started with `pnpm dev:web`, but company-authenticated mutations require an authorized backend environment and are intentionally unavailable from a clean checkout without those credentials.
 
-The owner-approved frontend is live at `https://kanon-agents.vercel.app` with the exact approved logo, one landing page, six application screens, and a server-side Vercel proxy to the deployed API. The requested `kanon.agents.vercel.app` alias is reserved for another Vercel account. Keep the visual system locked to [FRONTEND.md](FRONTEND.md). The remaining milestone is alias resolution, demo rehearsal, and evidence freeze. See [DEPLOYMENT.md](DEPLOYMENT.md) for the production proxy boundary.
+## Current limitations
+
+- The ENS identity and all recorded writes are on the authorized Sepolia namespace. No mainnet ENS write was made.
+- The prototype has not been audited for production custody or financial operations.
+- Privy aggregation behavior is method-dependent, and the documented stateful-policy concurrency caveat remains.
+- Request-count limits, token assets, arbitrary conditions, and unsupported policy combinations fail closed.
+- The Render free services can sleep after idle. Warm the API and runner before a live demo.
+- A future proof run needs an explicit owner-authorized reset of the shared Sepolia fixture after a revoke proof.
+- The repository currently has no selected open-source license. Public visibility and license selection remain separate owner decisions.
+
+## Repository map
+
+```text
+apps/web/       approved frontend and server-side development proxy
+apps/api/       company-authenticated lifecycle API
+apps/runner/    isolated delegated runner and live proof probes
+packages/       manifest, permission, Privy, ENSv2, and shared contracts
+evidence/       selected non-secret proof records
+docs/           public submission and implementation-status records
+tests/          domain, policy, lifecycle, API-contract, and tooling tests
+```
+
+The repository is a hackathon and testnet proof. Treat the security boundary and current implementation status as authoritative for the claims that can be made from this checkout.

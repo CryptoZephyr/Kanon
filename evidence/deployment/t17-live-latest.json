@@ -1,0 +1,201 @@
+{
+  "schema": "kanon.t17-live-evidence",
+  "version": 1,
+  "status": "passed",
+  "recordedAt": "2026-09-14T20:07:26.000Z",
+  "network": {
+    "name": "Ethereum Sepolia",
+    "chainId": 11155111,
+    "mainnetWrite": false
+  },
+  "repository": {
+    "remote": "https://github.com/CryptoZephyr/Kanon",
+    "branch": "main",
+    "sourceCommit": "ed3e190"
+  },
+  "frontend": {
+    "provider": "Vercel",
+    "project": "kanon-agents",
+    "projectId": "prj_N24mPu3Av0eWyqqekzxzHtsNYbOr",
+    "productionDeployment": "dpl_DUmPjGX6VWegUm58YqoxiUwAyW8c",
+    "deploymentUrl": "https://kanon-agents-jql3axtej-cryptozephyrs-projects.vercel.app",
+    "productionAlias": "https://kanon-agents.vercel.app",
+    "requestedAlias": {
+      "hostname": "kanon.agents.vercel.app",
+      "status": "unavailable",
+      "reason": "Vercel reported that *.agents.vercel.app is reserved for another account",
+      "mutationMade": false
+    },
+    "proxy": {
+      "function": "api/kanon-proxy.ts",
+      "routes": "vercel.json",
+      "companyTokenServerSide": true,
+      "healthStatus": 200,
+      "organizationReadStatus": 200,
+      "deepReleasePublishStatus": 200
+    }
+  },
+  "organization": {
+    "id": "organization-kanon",
+    "name": "Kanon",
+    "controlWallet": "0x8b88E1E1174eDC65B08de75A5439f130da8A3DFd",
+    "ensNamespace": "agents.kanon-ethonline-2026.eth"
+  },
+  "browserRehearsals": {
+    "status": "passed",
+    "count": 3,
+    "executionMethod": "eth_signTransaction",
+    "ensName": "representative-agent.agents.kanon-ethonline-2026.eth",
+    "resolver": "0x0D4560DaFEb04Cf022472B5085070A05E0d77e0B",
+    "recipient": "0x8b88e1e1174edc65b08de75a5439f130da8a3dfd",
+    "flow": [
+      "agent declaration displayed",
+      "company terms displayed",
+      "exact human approval displayed with packageHash, manifestHash, and permissionHash",
+      "active generation 0 reached",
+      "broader release displayed as requiring human reauthorization",
+      "pending release, terms, and permissionHash displayed in reauthorization review",
+      "active generation 1 reached after approval",
+      "revoke completed with final revoked generation 2"
+    ],
+    "runs": [
+      {
+        "installationId": "installation-release-t17-rehearsal-2",
+        "agentId": "com.example.t17.rehearsal2",
+        "initialReleaseId": "release-t17-rehearsal-2",
+        "initialMaxValueWei": "2",
+        "expandedMaxValueWei": "3",
+        "expandedRollingMaxValueWei": "3",
+        "finalReleaseId": "release-t17-rehearsal-2-next",
+        "finalPackageHash": "sha256:5d640049c2f946de12024c09d52f310c66bcdfda481a1c94c814954b6a5bc408",
+        "finalManifestHash": "sha256:c14f0a6e973d44de5c439100361990f8d54b5303e8cfabe29652a6c8afd6f747",
+        "finalPermissionHash": "sha256:be0c37817af0356a9c2aa996365928db025b7bb72d7658788af2e280cb58c8d4",
+        "activeGeneration": 1,
+        "finalStatus": "REVOKED",
+        "finalGeneration": 2,
+        "privyAuthorityRevoked": true,
+        "ensStatus": "revoked",
+        "postRevokeExecutionFailed": true
+      },
+      {
+        "installationId": "installation-release-t17-rehearsal-3",
+        "agentId": "com.example.t17.rehearsal3",
+        "initialReleaseId": "release-t17-rehearsal-3",
+        "initialMaxValueWei": "3",
+        "expandedMaxValueWei": "4",
+        "expandedRollingMaxValueWei": "4",
+        "finalReleaseId": "release-t17-rehearsal-3-next",
+        "finalPackageHash": "sha256:5d640049c2f946de12024c09d52f310c66bcdfda481a1c94c814954b6a5bc408",
+        "finalManifestHash": "sha256:830a4944cb62521033aaa2478ade2cccbcc77c07ba7d475f55eca78b97a00ce3",
+        "finalPermissionHash": "sha256:a54f47b6b62cba115ff0a0bc2c907f91290798e45309f4b7dd33d1430a6b449e",
+        "activeGeneration": 1,
+        "finalStatus": "REVOKED",
+        "finalGeneration": 2,
+        "privyAuthorityRevoked": true,
+        "ensStatus": "revoked",
+        "postRevokeExecutionFailed": true
+      },
+      {
+        "installationId": "installation-release-t17-rehearsal-4",
+        "agentId": "com.example.t17.rehearsal4",
+        "initialReleaseId": "release-t17-rehearsal-4",
+        "initialMaxValueWei": "4",
+        "expandedMaxValueWei": "5",
+        "expandedRollingMaxValueWei": "5",
+        "finalReleaseId": "release-t17-rehearsal-4-next",
+        "finalPackageHash": "sha256:5d640049c2f946de12024c09d52f310c66bcdfda481a1c94c814954b6a5bc408",
+        "finalManifestHash": "sha256:debfd4dd5ccf39b340071776ae4a81c7eb5847a0e83b511c0206946a8d81ab8e",
+        "finalPermissionHash": "sha256:15acbb366756d84f3a9968409c2a51a509ffc650043d2c62ad29fbf22e5f3e32",
+        "activeGeneration": 1,
+        "finalStatus": "REVOKED",
+        "finalGeneration": 2,
+        "privyAuthorityRevoked": true,
+        "ensStatus": "revoked",
+        "postRevokeExecutionFailed": true
+      }
+    ]
+  },
+  "privy": {
+    "walletId": "daw18yxziq98ljz1t2hricvu",
+    "walletAddress": "0x42D5Fb257d479187607D47C19433Be6aEEd4a9A9",
+    "ownerKeyQuorumId": "qnvqwminvphhhpjfn8d2xm1x",
+    "delegatedSignerId": "sg2lc6vqtl2a7s2ibv7f2ca0",
+    "statefulExecutionMethod": "eth_signTransaction",
+    "signerCountAfterRevoke": 0
+  },
+  "ens": {
+    "parent": "kanon-ethonline-2026.eth",
+    "agentsNamespace": "agents.kanon-ethonline-2026.eth",
+    "agentName": "representative-agent.agents.kanon-ethonline-2026.eth",
+    "node": "0x99559cbe48957d053552b64d39bffe65a07f480fd8c703f389adfea9501cb5ef",
+    "resolver": "0x0D4560DaFEb04Cf022472B5085070A05E0d77e0B",
+    "protectedRecords": [
+      "kanon.agentId",
+      "kanon.release",
+      "kanon.permissionHash",
+      "kanon.status"
+    ],
+    "normalResolutionReadback": true,
+    "scopedCompanyWriterSucceeded": true,
+    "unauthorizedWriterRejected": true,
+    "finalCanonicalStatus": "revoked"
+  },
+  "liveProof": {
+    "runId": "1fc70730-9172-4111-bdac-20cd6c04f146",
+    "status": "passed",
+    "runnerServiceUsed": true,
+    "databaseMigrations": true,
+    "t11": {
+      "releaseId": "release-t6-ethonline-2026",
+      "packageHash": "sha256:56b96d50aec66f6c687cc56ed54f8b408a4a38fc6e10c697106c67c3791ec1cd",
+      "manifestHash": "sha256:3b9f5001025a9a7ab6dd80bf17516d55e04cb3c7e918731405c9c7f09c1d6a7a",
+      "permissionHash": "sha256:7171a1991636a5923a86991b8b9f284b9a5a5082458645a05d7f69f0f0eed56b",
+      "policyId": "u3f5ilx2kx9k8w5eh838smfn",
+      "aggregationId": "pyhtty3k8ohy7sj7pbzrs94y",
+      "allowedTransactionHash": "0x1fc4b81b9880b7d44460b3e5dc90d08b713916b7e63ef6c04289b43f21112d1c",
+      "forbiddenOutcome": "REJECTED",
+      "forbiddenRejectionCode": "PRIVY_POLICY_REJECTED_400"
+    },
+    "t12": {
+      "releaseId": "release-t12-expanded-ethonline-2026",
+      "packageHash": "sha256:8c434023dbc035910b8d3a052b558eb4bc347dbead8087072c54227ee4bba34d",
+      "manifestHash": "sha256:c0abd1fd16081cb090dce81b095c44b900b7bbb3f30e75420af199ad5ec93016",
+      "permissionHash": "sha256:03addc680f02084339b8274161a478bd360518ae485de631d50b203b5094b4ff",
+      "policyId": "uwjx7synvxu49e6zpi15ox3y",
+      "aggregationId": "a9b072k3x2u10v1jui0heik4",
+      "classification": "EXPANDED",
+      "requiresHumanReview": true,
+      "blockedBeforeReauthorization": true,
+      "activeGeneration": 1,
+      "directDelegatedTransactionHash": "0x085613835d7c8ee5a4f521a63e522b6d90d965a3549e52c1c9f9d34959dad786"
+    },
+    "t13": {
+      "installationStatus": "REVOKED",
+      "postRevokeOutcome": "REJECTED",
+      "postRevokeRejectionCode": "RUNNER_REFUSED_STALE_OR_REVOKED",
+      "ensStatus": "revoked",
+      "signerCountAfterRevoke": 0,
+      "unauthorizedRestoreRejected": true,
+      "ensRevocationTransactionHash": "0x1c57dd8ef44702d1d66361a6eaa4d257be9d2adb721d0c45c010948df369577c"
+    }
+  },
+  "fixtureReset": {
+    "reason": "Browser rehearsals intentionally changed the shared representative ENS fixture before the deployed T11-T13 proof.",
+    "permissionHashRestored": "sha256:7171a1991636a5923a86991b8b9f284b9a5a5082458645a05d7f69f0f0eed56b",
+    "transactions": [
+      "0x84f50ee6816af89b01f6e9d82d37bdfff6ac6757f3189b2e38fc6b0f7f10f9e9",
+      "0x815d0490bd3393468519cbbdc288101cf45ab739462415674c7f5c49436dff72",
+      "0x4c36593f897bdbf6876990a8b7db91d06e2c899a2ccf7edae40f87832c13efdf",
+      "0x17fdb07b5208be2e9691b034e7426065bc883c5b5d0b1c3c9ce1846ec641e408"
+    ],
+    "ownerAuthorized": true,
+    "network": "Ethereum Sepolia"
+  },
+  "security": {
+    "companyTokenServerSideOnly": true,
+    "ownerCredentialsPassedToRunner": false,
+    "mainnetWrite": false,
+    "secretsRecorded": false,
+    "unsupportedAliasSubstitution": false
+  }
+}

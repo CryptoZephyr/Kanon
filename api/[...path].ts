@@ -14,7 +14,9 @@ interface VercelRequest extends IncomingMessage {
 }
 
 interface VercelResponse extends ServerResponse {
+  send(body: Buffer | string): VercelResponse;
   json(payload: unknown): VercelResponse;
+  status(code: number): VercelResponse;
 }
 
 const UPSTREAM_ORIGIN =
@@ -39,16 +41,11 @@ function writeError(
   statusCode: number,
   code: string,
 ): void {
-  response.statusCode = statusCode;
-  response.setHeader("cache-control", "no-store");
-  response.setHeader("content-type", "application/json; charset=utf-8");
-  response.end(
-    JSON.stringify({
-      schema: "kanon.api.error",
-      version: 1,
-      code,
-    }),
-  );
+  response.status(statusCode).json({
+    schema: "kanon.api.error",
+    version: 1,
+    code,
+  });
 }
 
 function serializeBody(body: ParsedBody): BodyInit | undefined {
@@ -107,12 +104,10 @@ export default async function handler(
   }
 
   const responseBody = Buffer.from(await upstream.arrayBuffer());
-  response.statusCode = upstream.status;
   upstream.headers.forEach((value, name) => {
     if (!HOP_BY_HOP_HEADERS.has(name)) {
       response.setHeader(name, value);
     }
   });
-  response.setHeader("content-length", responseBody.byteLength);
-  response.end(responseBody);
+  response.status(upstream.status).send(responseBody);
 }

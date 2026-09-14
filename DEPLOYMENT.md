@@ -9,7 +9,7 @@ Status as of 2026-09-14: T15 and T16 are complete. The approved frontend is impl
 - Repository: `https://github.com/CryptoZephyr/Kanon`
 - Visibility: private
 - Branch: `main`
-- Current verified commit before this documentation update: `a5ebf6405c942631516ccfe630f9ab5c594c8879`
+- Previous verified application commit before this documentation reconciliation: `a5ebf6405c942631516ccfe630f9ab5c594c8879`
 - Node.js: `22.23.2`
 - pnpm: `11.5.0`
 - Frontend package: `apps/web`

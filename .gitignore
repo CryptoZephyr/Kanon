@@ -15,3 +15,17 @@ coverage/
 *.keystore
 
 .vercel
+.claude/
+
+# Internal project planning and canonical private handoff records
+AI_TOOLING.md
+Architecture.md
+Build.md
+DEMO.md
+FRONTEND.md
+HACKATHON_RULES.md
+Handoff.md
+INTEGRATIONS.md
+MANIFEST_SPEC.md
+PRD.md
+Tasks.md

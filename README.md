@@ -65,7 +65,7 @@ The hosted demo is the simplest way to inspect the product. A local frontend can
 - Request-count limits, token assets, arbitrary conditions, and unsupported policy combinations fail closed.
 - The Render free services can sleep after idle. Warm the API and runner before a live demo.
 - A future proof run needs an explicit owner-authorized reset of the shared Sepolia fixture after a revoke proof.
-- The repository currently has no selected open-source license. Public visibility and license selection remain separate owner decisions.
+- The repository is licensed under the [MIT License](LICENSE). GitHub visibility remains private until the owner authorizes publication.
 
 ## Repository map
 
@@ -77,6 +77,7 @@ packages/       manifest, permission, Privy, ENSv2, and shared contracts
 evidence/       selected non-secret proof records
 docs/           public submission and implementation-status records
 tests/          domain, policy, lifecycle, API-contract, and tooling tests
+LICENSE         MIT license for reuse of the repository
 ```
 
 The repository is a hackathon and testnet proof. Treat the security boundary and current implementation status as authoritative for the claims that can be made from this checkout.

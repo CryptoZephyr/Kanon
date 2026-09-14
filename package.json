@@ -2,6 +2,7 @@
   "name": "kanon",
   "version": "0.0.0",
   "private": true,
+  "license": "MIT",
   "description": "Kanon business agent-control runtime and approved frontend workspace.",
   "type": "module",
   "packageManager": "pnpm@11.5.0",

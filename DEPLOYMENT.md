@@ -25,6 +25,8 @@ Status as of 2026-09-14: T15, T16, and T17 are complete. The approved frontend i
 | Runner   | Render   | https://kanon-runner.onrender.com | `srv-daj102fqj5pc73bs02r0`     | `dep-dajt9kojo6nc73cn9jhg`, commit `85c7434` |
 | Database | Neon     | private connection                | project `kanon-ethonline-2026` | PostgreSQL 18, `aws-eu-central-1`            |
 
+Render uses native Node.js 22 services with the build and start commands in `render.yaml`. No Docker image is required for the current deployment.
+
 Verified backend state:
 
 - API health returned `ok` and database `ok`.
@@ -77,7 +79,7 @@ Do not make a mainnet ENS write. Keep Render as the backend authority plane and 
 - `docs/implementation-status.md` separates live, tested, blocked, and future work.
 - `.github/workflows/ci.yml` runs the pinned Node.js and pnpm install, typecheck, test, lint, format, and frontend build checks on `main` pushes and pull requests.
 - Relative links in the public documentation resolve locally, the tracked-file secret-pattern scan returned no real credential matches, and the live Vercel browser surface passed the landing, workspace, API connection, namespace readback, agent detail, reload, and console checks.
-- GitHub visibility remains private and no open-source license has been selected. Those are owner decisions before public publication.
+- GitHub visibility remains private. The repository now includes the MIT License in `LICENSE`; changing visibility remains an explicit owner decision.
 
 ## Evidence and checks
 

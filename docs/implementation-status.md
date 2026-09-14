@@ -37,15 +37,15 @@ The local suite covers the domain contract, deterministic permission hashing, pe
 ## Known limitations and blockers
 
 - This is a Sepolia hackathon proof, not a mainnet or production custody deployment.
-- No open-source license has been selected for the repository. Reuse rights are not granted until the owner chooses and adds a license.
+- The repository is licensed under the MIT License in `LICENSE`. GitHub visibility remains private pending an explicit owner decision.
 - The exact `kanon.agents.vercel.app` alias is reserved for another Vercel account. The verified default Vercel alias is used.
 - Render free services can sleep after idle.
+- Render uses native Node.js services from `render.yaml`; unused Dockerfiles are excluded from the public repository.
 - The persistent ENS fixture needs an explicit owner-authorized baseline reset before repeating a full activation-to-revoke proof.
 - The negative provider-failure rollback variant for the update API remains future integration work.
 
 ## Future work
 
-- Select and publish the repository license.
 - Decide whether the private GitHub repository should become public.
 - Add a public demo recording and final submission artifacts.
 - Add the provider-failure rollback integration test.

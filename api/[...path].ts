@@ -69,11 +69,16 @@ export default {
       return errorResponse(502, "UPSTREAM_REQUEST_FAILED");
     }
 
+    const upstreamBody = await upstream.text();
     const responseHeaders = new Headers(upstream.headers);
     for (const name of HOP_BY_HOP_HEADERS) {
       responseHeaders.delete(name);
     }
-    return new Response(upstream.body, {
+    responseHeaders.set(
+      "x-kanon-proxy-debug-body-length",
+      `${upstreamBody.length}`,
+    );
+    return new Response(upstreamBody, {
       status: upstream.status,
       statusText: upstream.statusText,
       headers: responseHeaders,

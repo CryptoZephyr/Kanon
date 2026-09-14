@@ -126,6 +126,7 @@ export function createDeploymentDatabase(
           FROM kanon_installations
           WHERE state->>'organizationId' = $1
             AND state->'release'->>'agentId' = $2
+            AND state->>'status' <> 'REVOKED'
           ORDER BY updated_at DESC
           LIMIT 1
         `,

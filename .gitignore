@@ -13,3 +13,5 @@ coverage/
 *.key
 *.p12
 *.keystore
+
+.vercel

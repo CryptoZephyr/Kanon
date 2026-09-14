@@ -106,11 +106,13 @@ export default async function handler(
     return;
   }
 
+  const responseBody = Buffer.from(await upstream.arrayBuffer());
   response.statusCode = upstream.status;
   upstream.headers.forEach((value, name) => {
     if (!HOP_BY_HOP_HEADERS.has(name)) {
       response.setHeader(name, value);
     }
   });
-  response.end(Buffer.from(await upstream.arrayBuffer()));
+  response.setHeader("content-length", responseBody.byteLength);
+  response.end(responseBody);
 }

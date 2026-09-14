@@ -52,4 +52,4 @@ No real secrets belong in this repository. Copy the names in `.env.example` into
 
 ## Frontend
 
-The owner-approved frontend is implemented in `apps/web` with the exact approved logo, one landing page, and six application screens. Keep the visual system locked to [FRONTEND.md](FRONTEND.md). The next milestone is the Vercel frontend deployment, followed by demo rehearsal and evidence freeze. See [DEPLOYMENT.md](DEPLOYMENT.md) for the production proxy boundary.
+The owner-approved frontend is live at `https://kanon-agents.vercel.app` with the exact approved logo, one landing page, six application screens, and a server-side Vercel proxy to the deployed API. The requested `kanon.agents.vercel.app` alias is reserved for another Vercel account. Keep the visual system locked to [FRONTEND.md](FRONTEND.md). The remaining milestone is alias resolution, demo rehearsal, and evidence freeze. See [DEPLOYMENT.md](DEPLOYMENT.md) for the production proxy boundary.

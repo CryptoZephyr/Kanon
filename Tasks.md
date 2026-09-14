@@ -279,7 +279,7 @@ Acceptance:
 
 ## Final verification checkpoint
 
-Status: T11, T12, T13, T14, T15, and the owner-authorized T16 deployment complete. The repository is on private GitHub remote `https://github.com/CryptoZephyr/Kanon` on branch `main`. `.env.local` is ignored and no secret value is tracked. The live lifecycle evidence is in `evidence/lifecycle/t11-t13-latest.json`, the frontend lifecycle evidence is in `evidence/frontend/t15-live-latest.json`, and the deployed proof summary is in `evidence/deployment/render-neon-latest.json`. T14 contract evidence is in `tests/api-contracts.t14.test.ts`.
+Status: T11, T12, T13, T14, T15, T16, and the Vercel deployment portion of T17 are complete. The repository is on private GitHub remote `https://github.com/CryptoZephyr/Kanon` on branch `main`. `.env.local` is ignored and no secret value is tracked. The live lifecycle evidence is in `evidence/lifecycle/t11-t13-latest.json`, the frontend lifecycle evidence is in `evidence/frontend/t15-live-latest.json`, and the deployed proof summary is in `evidence/deployment/render-neon-latest.json`. T14 contract evidence is in `tests/api-contracts.t14.test.ts`.
 
 - Node.js `22.23.2`, pnpm `11.5.0`, TypeScript `5.9.2`, ESLint `9.35.0`, Vitest `3.2.4`, and Prettier `3.6.2` are selected.
 - `pnpm install --frozen-lockfile`: passed across all 7 workspace projects.
@@ -291,12 +291,12 @@ Status: T11, T12, T13, T14, T15, and the owner-authorized T16 deployment complet
 - Official Privy MCP, official Privy Agent Skill, Privy machine-readable fallback docs, ENS machine-readable docs, and Context7 `/ensdomains/docs` remain configured and verified.
 - Render service health, Neon migration, private GitHub visibility, API authentication, and the remote lifecycle proof passed. Full deployment identifiers and evidence are in `evidence/deployment/render-neon-latest.json`.
 - The approved frontend implementation and live API lifecycle connection are complete. No mainnet or production ENS write was performed.
-- Vercel CLI `54.9.0` is authenticated, but no Kanon Vercel project or deployment exists. Public frontend deployment is the immediate T17 action and is documented in `DEPLOYMENT.md`.
+- Vercel project `kanon-agents` is live at `https://kanon-agents.vercel.app` with production deployment `dpl_9HrLAS5RmXHkhXWMZRjmUFj99WdQ`. The server-side proxy and sensitive company-token environment are configured. The requested `kanon.agents.vercel.app` alias is reserved for another account, so alias resolution and demo evidence remain open and are documented in `DEPLOYMENT.md`.
 
 Deployment risk and sequence note:
 
 - The first remote proof failed closed because the persistent ENS fixture was already revoked. The existing T6 setup probe restored the exact approved baseline before the successful run. Future proof runs need an explicit owner-authorized baseline reset before starting.
-- The backend deployment occurred before the owner frontend handoff, but both T15 and T16 are now complete. T17 is the next milestone. Its immediate action is the Vercel frontend deployment.
+- The backend deployment occurred before the owner frontend handoff, but both T15 and T16 are now complete. The Vercel deployment portion of T17 is live. The remaining T17 work is alias resolution, demo rehearsal, and evidence freeze.
 
 ### T1A - Minimal agent/domain contract
 
@@ -407,8 +407,8 @@ Deterministic authority hashing, human approval, real Privy wallet control, rest
 
 T15 owner design is approved in the canonical [FRONTEND.md](https://app.notion.com/p/3d8c5381831281e781e7cc5c72c4c9db) handoff. The implementation pass now contains the special landing page, exact approved logo asset, six approved screens, responsive Field / Structure / Signal styling, accessible controls, reduced-motion behavior, and a typed frontend client for the frozen API routes.
 
-The deployed API serves the frozen organization, agent, installation, company-terms, approval, update-diff, evidence, and revoke routes in addition to health and proof. Approval and reauthorization are asynchronous. The frontend keeps the company token server-side, polls configuration state, and remains fail-closed if authority does not reach `ACTIVE`. The live lifecycle is verified against Render, Neon, Privy, ENSv2, and the isolated runner. The frontend has not yet been deployed to Vercel.
+The deployed API serves the frozen organization, agent, installation, company-terms, approval, update-diff, evidence, and revoke routes in addition to health and proof. Approval and reauthorization are asynchronous. The frontend keeps the company token server-side, polls configuration state, and remains fail-closed if authority does not reach `ACTIVE`. The live lifecycle is verified against Render, Neon, Privy, ENSv2, and the isolated runner. The frontend is live at `https://kanon-agents.vercel.app`, and Chrome verified API connection, organization readback, and the Add an agent screen. The requested `kanon.agents.vercel.app` alias is reserved for another account.
 
 ## Next action
 
-T15 and T16 are complete. Proceed to T17. The immediate action is to create or link the Kanon Vercel project, deploy `apps/web`, add a server-side `/api` proxy that attaches `KANON_COMPANY_API_TOKEN`, and verify the production frontend flow. Warm the free Render services before the demo, use the authorized Sepolia namespace only, and keep the frontend company token boundary unchanged.
+T15 and T16 are complete, and the Vercel deployment portion of T17 is live. Resolve the alias decision, then rehearse the disposable production create to revoke flow and freeze the evidence. Keep the company token server-side, warm the free Render services before the demo, use the authorized Sepolia namespace only, and keep the frontend token boundary unchanged.

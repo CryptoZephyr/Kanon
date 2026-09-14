@@ -3,6 +3,7 @@ const UPSTREAM_ORIGIN =
 
 const HOP_BY_HOP_HEADERS = [
   "connection",
+  "content-encoding",
   "content-length",
   "host",
   "keep-alive",
@@ -69,16 +70,11 @@ export default {
       return errorResponse(502, "UPSTREAM_REQUEST_FAILED");
     }
 
-    const upstreamBody = await upstream.text();
     const responseHeaders = new Headers(upstream.headers);
     for (const name of HOP_BY_HOP_HEADERS) {
       responseHeaders.delete(name);
     }
-    responseHeaders.set(
-      "x-kanon-proxy-debug-body-length",
-      `${upstreamBody.length}`,
-    );
-    return new Response(upstreamBody, {
+    return new Response(upstream.body, {
       status: upstream.status,
       statusText: upstream.statusText,
       headers: responseHeaders,

@@ -1385,10 +1385,15 @@ export default function App() {
           : (permissionHash ?? ""),
     };
     try {
-      const next = await api.approval(
+      const submitted = await api.approval(
         ORGANIZATION_ID,
         nextInstallationId,
         decision,
+      );
+      const next = await api.waitForInstallation(
+        ORGANIZATION_ID,
+        nextInstallationId,
+        submitted,
       );
       setWorkspace((current) => ({
         ...current,
@@ -1398,6 +1403,12 @@ export default function App() {
       }));
       if (next.companyTerms.permissionHash)
         setPermissionHash(next.companyTerms.permissionHash);
+      if (next.status !== "ACTIVE") {
+        setError(
+          "Authority configuration did not reach ACTIVE. The installation remains fail-closed for review.",
+        );
+        return;
+      }
       setScreen("detail");
     } catch (caught) {
       setError(getErrorMessage(caught));

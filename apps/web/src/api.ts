@@ -314,6 +314,25 @@ export class KanonApi {
     );
   }
 
+  public async waitForInstallation(
+    organizationId: string,
+    installationId: string,
+    initial: InstallationResource,
+  ): Promise<InstallationResource> {
+    let current = initial;
+    for (let attempt = 0; attempt < 90; attempt += 1) {
+      if (
+        current.status !== "CONFIGURING_AUTHORITY" &&
+        current.status !== "AWAITING_REAUTHORIZATION"
+      ) {
+        return current;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 2_000));
+      current = await this.installation(organizationId, installationId);
+    }
+    return current;
+  }
+
   public publishRelease(
     organizationId: string,
     agentId: string,

@@ -297,6 +297,35 @@ async function parseDecision(
 }
 
 let proofInFlight = false;
+const authorityOperations = new Map<string, Promise<void>>();
+
+function startAuthorityOperation(
+  database: DeploymentDatabase,
+  configuring: Installation,
+): void {
+  if (authorityOperations.has(configuring.id)) return;
+  const operation = (async (): Promise<void> => {
+    const authority = await configureLiveAuthority(configuring);
+    const active = transitionInstallation(configuring, {
+      type: "authority_configured",
+      privy: authority.privy,
+      ens: authority.ens,
+      ...(configuring.status === "AWAITING_REAUTHORIZATION"
+        ? {
+            release: configuring.pendingUpdate!.release,
+            permissionSet: configuring.pendingUpdate!.permissionSet,
+          }
+        : {}),
+    });
+    await database.saveInstallation(active);
+  })().finally(() => {
+    authorityOperations.delete(configuring.id);
+  });
+  authorityOperations.set(configuring.id, operation);
+  void operation.catch((error: unknown) => {
+    console.error(`kanon_authority_operation_failed=${safeErrorCode(error)}`);
+  });
+}
 
 async function runProof(
   database: DeploymentDatabase,
@@ -654,22 +683,11 @@ async function handleOrganizationRequest(
         409,
       );
     }
-    const authority = await configureLiveAuthority(configuring);
-    const active = transitionInstallation(configuring, {
-      type: "authority_configured",
-      privy: authority.privy,
-      ens: authority.ens,
-      ...(configuring.status === "AWAITING_REAUTHORIZATION"
-        ? {
-            release: configuring.pendingUpdate!.release,
-            permissionSet: configuring.pendingUpdate!.permissionSet,
-          }
-        : {}),
-    });
+    startAuthorityOperation(database, configuring);
     sendJson(
       response,
-      200,
-      createApiSuccess(await saveAndRenderInstallation(database, active)),
+      202,
+      createApiSuccess(await installationResource(database, configuring)),
     );
     return;
   }

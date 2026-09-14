@@ -149,9 +149,19 @@ async function executeOnPrivy(
         : (() => {
             throw new Error("transaction data must be a hex string");
           })();
-  const account = getAddress(
-    (await client.wallets().get(input.walletId)).address,
+  const wallet = await client.wallets().get(input.walletId);
+  const delegatedSigner = wallet.additional_signers.find(
+    (signer) =>
+      signer.signer_id === input.delegatedSignerId &&
+      (signer.override_policy_ids ?? []).includes(input.policyId),
   );
+  if (!delegatedSigner) {
+    return {
+      outcome: "REJECTED",
+      rejectionCode: "PRIVY_DELEGATED_AUTHORITY_REVOKED",
+    };
+  }
+  const account = getAddress(wallet.address);
   const [nonce, gasPrice] = await Promise.all([
     financialClient.getTransactionCount({ address: account }),
     financialClient.getGasPrice(),

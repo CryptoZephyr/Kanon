@@ -3,5 +3,18 @@
   "framework": "vite",
   "installCommand": "pnpm install --frozen-lockfile",
   "buildCommand": "pnpm build:web",
-  "outputDirectory": "apps/web/dist"
+  "outputDirectory": "apps/web/dist",
+  "routes": [
+    {
+      "src": "/api$",
+      "dest": "/api/kanon-proxy?__kanon_path=/"
+    },
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/kanon-proxy?__kanon_path=/$1"
+    },
+    {
+      "handle": "filesystem"
+    }
+  ]
 }

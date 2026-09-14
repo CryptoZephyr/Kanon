@@ -372,8 +372,10 @@ async function runProof(
   }
 }
 
-async function assertRunnerRejected(installation: Installation): Promise<void> {
-  const context = createRunnerContext(installation);
+async function assertRunnerRejected(
+  installation: Installation,
+  context = createRunnerContext(installation),
+): Promise<void> {
   const response = await fetch(
     `${RUNNER_BASE_URL.replace(/\/$/, "")}/internal/execute`,
     {
@@ -701,7 +703,7 @@ async function handleOrganizationRequest(
     const existing = await database.getInstallation(installationId);
     if (!existing)
       throw new ResourceError("installation was not found", "NOT_FOUND", 404);
-    if (existing.status !== "ACTIVE") {
+    if (existing.status !== "ACTIVE" && existing.status !== "REVOKING") {
       throw new ResourceError(
         `revocation requires an active installation, got ${existing.status}`,
         existing.status === "REVOKED" ? "REVOKED" : "CONFLICT",
@@ -713,13 +715,22 @@ async function handleOrganizationRequest(
       existing.release,
       existing.permissionSet,
     );
-    const revoking = transitionInstallation(existing, {
-      type: "revoke_requested",
-      decision,
+    const context = createRunnerContext({
+      ...existing,
+      status: "ACTIVE",
     });
-    await database.saveInstallation(revoking);
+    const revoking =
+      existing.status === "REVOKING"
+        ? existing
+        : transitionInstallation(existing, {
+            type: "revoke_requested",
+            decision,
+          });
+    if (existing.status !== "REVOKING") {
+      await database.saveInstallation(revoking);
+    }
     const revokedPrivy = await revokeLiveAuthority(existing);
-    await assertRunnerRejected(existing);
+    await assertRunnerRejected(existing, context);
     const ens = await readVerifiedEnsState(existing);
     const ensRuntime = await import(
       "../../runner/src/lifecycle-t11-t13-probe.js"

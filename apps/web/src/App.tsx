@@ -732,7 +732,7 @@ function ApprovalReview({
   error,
 }: {
   readonly agent: AgentResource;
-  readonly terms: CompanyRule[];
+  readonly terms: readonly CompanyRule[];
   readonly permissionHash?: string;
   readonly action: "APPROVE" | "REAUTHORIZE";
   readonly onApprove: () => void;
@@ -1493,6 +1493,18 @@ export default function App() {
     return <LandingPage onEnter={() => setScreen("agents")} />;
   const installation = workspace.installation;
   const currentAgent = installation?.agent ?? draftAgent ?? workspace.agent;
+  const reauthorizationPending =
+    installation?.status === "AWAITING_REAUTHORIZATION" ||
+    installation?.status === "UPDATE_AVAILABLE";
+  const reviewAgent = reauthorizationPending ? draftAgent : currentAgent;
+  const reviewTerms = reauthorizationPending
+    ? (installation?.updateDiff?.proposal.permissionSet.companyTerms.authority
+        .rules ?? terms)
+    : terms;
+  const reviewPermissionHash = reauthorizationPending
+    ? (installation?.updateDiff?.proposal.permissionSet.permissionHash ??
+      permissionHash)
+    : permissionHash;
   return (
     <AppShell
       screen={screen}
@@ -1536,21 +1548,13 @@ export default function App() {
       )}
       {screen === "review" && (
         <ApprovalReview
-          agent={currentAgent}
-          terms={terms}
-          permissionHash={permissionHash}
-          action={
-            workspace.installation?.status === "AWAITING_REAUTHORIZATION" ||
-            workspace.installation?.status === "UPDATE_AVAILABLE"
-              ? "REAUTHORIZE"
-              : "APPROVE"
-          }
+          agent={reviewAgent}
+          terms={reviewTerms}
+          permissionHash={reviewPermissionHash}
+          action={reauthorizationPending ? "REAUTHORIZE" : "APPROVE"}
           onApprove={() =>
             void handleApproval(
-              workspace.installation?.status === "AWAITING_REAUTHORIZATION" ||
-                workspace.installation?.status === "UPDATE_AVAILABLE"
-                ? "REAUTHORIZE"
-                : "APPROVE",
+              reauthorizationPending ? "REAUTHORIZE" : "APPROVE",
             )
           }
           onBack={() =>

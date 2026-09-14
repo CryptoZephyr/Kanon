@@ -33,6 +33,12 @@ function errorResponse(status: number, code: string): Response {
   );
 }
 
+function forwardedPath(requestUrl: URL): string {
+  const value = requestUrl.searchParams.get("__kanon_path");
+  if (!value || value === "/") return "/";
+  return value.startsWith("/") ? value : `/${value}`;
+}
+
 export default {
   async fetch(request: Request): Promise<Response> {
     const companyToken = process.env.KANON_COMPANY_API_TOKEN;
@@ -41,10 +47,11 @@ export default {
     }
 
     const requestUrl = new URL(request.url);
-    const upstreamPath =
-      requestUrl.pathname.replace(/^\/api(?=\/|$)/, "") || "/";
+    const query = new URLSearchParams(requestUrl.searchParams);
+    query.delete("__kanon_path");
+    const queryString = query.toString();
     const upstreamUrl = new URL(
-      `${upstreamPath}${requestUrl.search}`,
+      `${forwardedPath(requestUrl)}${queryString ? `?${queryString}` : ""}`,
       UPSTREAM_ORIGIN,
     );
     const headers = new Headers(request.headers);

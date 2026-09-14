@@ -84,19 +84,22 @@ const EVIDENCE_PATH = resolve(
   "t11-t13-latest.json",
 );
 
-const CHAIN_ID = 11155111;
-const CONTROL_WALLET = getAddress("0x8b88E1E1174eDC65B08de75A5439f130da8A3DFd");
-const REPRESENTATIVE_AGENT_OWNER = getAddress(
+export const CHAIN_ID = 11155111;
+export const CONTROL_WALLET = getAddress(
+  "0x8b88E1E1174eDC65B08de75A5439f130da8A3DFd",
+);
+export const REPRESENTATIVE_AGENT_OWNER = getAddress(
   "0x42D5Fb257d479187607D47C19433Be6aEEd4a9A9",
 );
-const AGENT_ID = "com.example.treasury";
+export const AGENT_ID = "com.example.treasury";
 const RELEASE_A_ID = "release-t6-ethonline-2026";
 const RELEASE_B_ID = "release-t12-expanded-ethonline-2026";
-const AGENT_NAME = "representative-agent.agents.kanon-ethonline-2026.eth";
-const ORGANIZATION_NAME = "kanon-ethonline-2026.eth";
-const NAMESPACE_NAME = "agents.kanon-ethonline-2026.eth";
-const RECIPIENT = CONTROL_WALLET;
-const WALLET_EXTERNAL_ID = "kanon-t3-sepolia";
+export const AGENT_NAME =
+  "representative-agent.agents.kanon-ethonline-2026.eth";
+export const ORGANIZATION_NAME = "kanon-ethonline-2026.eth";
+export const NAMESPACE_NAME = "agents.kanon-ethonline-2026.eth";
+export const RECIPIENT = CONTROL_WALLET;
+export const WALLET_EXTERNAL_ID = "kanon-t3-sepolia";
 const RECORD_VALUES_A = {
   agentId: AGENT_ID,
   releaseId: RELEASE_A_ID,
@@ -243,7 +246,7 @@ async function requestPrivyJson(
   return parsed as Record<string, unknown>;
 }
 
-async function createAggregation(
+export async function createAggregation(
   environment: PrivyControlEnvironment,
   input: AggregationInput,
 ): Promise<Aggregation> {
@@ -259,7 +262,7 @@ async function createAggregation(
   return result as unknown as Aggregation;
 }
 
-async function deleteAggregation(
+export async function deleteAggregation(
   environment: PrivyControlEnvironment,
   aggregationId: string,
   owner: OwnerCredentials,
@@ -273,7 +276,7 @@ async function deleteAggregation(
   );
 }
 
-async function setAgentPolicy(
+export async function setAgentPolicy(
   client: PrivySdkClient,
   walletId: string,
   agentSignerId: string,
@@ -298,7 +301,7 @@ async function setAgentPolicy(
   }
 }
 
-async function removeAgentPolicy(
+export async function removeAgentPolicy(
   client: PrivySdkClient,
   walletId: string,
   owner: OwnerCredentials,
@@ -312,9 +315,9 @@ async function removeAgentPolicy(
   }
 }
 
-async function deletePolicy(
+export async function deletePolicy(
   client: PrivySdkClient,
-  policy: Policy,
+  policy: Pick<Policy, "id">,
   owner: OwnerCredentials,
 ): Promise<void> {
   await client.policies().delete(policy.id, {
@@ -361,7 +364,7 @@ function permissionSet(
   });
 }
 
-function policyCreateParams(
+export function policyCreateParams(
   plan: ReturnType<typeof compilePrivyPolicy>,
   idempotencyKey: string,
 ): PolicyCreateParams & { readonly idempotency_key: string } {
@@ -387,10 +390,10 @@ function binding(
   };
 }
 
-function ensExpectedState(input: {
+export function ensExpectedState(input: {
   readonly release: AgentRelease;
   readonly permissionSet: NormalizedPermissionSet;
-  readonly status: "approved" | "revoked";
+  readonly status: "approved" | "active" | "revoked";
 }): EnsApprovedState {
   return {
     agentId: input.release.agentId,
@@ -400,7 +403,7 @@ function ensExpectedState(input: {
   };
 }
 
-function ensStateFromRead(
+export function ensStateFromRead(
   identity: EnsIdentityBinding,
   state: EnsApprovedState,
   observedAt: string,
@@ -426,7 +429,7 @@ async function waitForReceipt(
   }
 }
 
-function createEnsRuntime() {
+export function createEnsRuntime() {
   const rpcUrl = requiredEnv("ENS_SEPOLIA_RPC_URL");
   const privateKey = requiredEnv("ENS_CONTROL_PRIVATE_KEY") as Hex;
   const account = privateKeyToAccount(privateKey);

@@ -1,6 +1,7 @@
 import type {
   AgentCapabilityManifest,
   AgentRelease,
+  AgentReleaseInput,
   AgentId,
   ManifestHash,
   PackageHash,
@@ -13,6 +14,7 @@ import type {
 } from "../../ens/src/index.js";
 import type {
   CompanyAuthorityTerms,
+  CompanyAuthorityTermsInput,
   NormalizedPermissionSet,
   PermissionDiff,
   PermissionHash,
@@ -67,6 +69,11 @@ export const KANON_API_ROUTES = Object.freeze({
     path: "/v1/organizations/{organizationId}/agents/{agentId}/releases",
     auth: "company",
   },
+  companyTerms: {
+    method: "POST",
+    path: "/v1/organizations/{organizationId}/installations/{installationId}/company-terms",
+    auth: "company",
+  },
   installation: {
     method: "GET",
     path: "/v1/organizations/{organizationId}/installations/{installationId}",
@@ -101,6 +108,7 @@ export const KANON_API_CONTRACT = Object.freeze({
 });
 
 export type ApiErrorCode =
+  | "UNAUTHORIZED"
   | "INVALID_REQUEST"
   | "NOT_FOUND"
   | "CONFLICT"
@@ -293,14 +301,14 @@ export interface PublishAgentReleaseRequest {
   readonly schema: "kanon.api.publish-release";
   readonly version: ApiContractVersion;
   readonly organizationId: OrganizationId;
-  readonly release: AgentRelease;
+  readonly release: AgentRelease | AgentReleaseInput;
 }
 
 export interface DefineCompanyTermsRequest {
   readonly schema: "kanon.api.define-company-terms";
   readonly version: ApiContractVersion;
   readonly installationId: InstallationId;
-  readonly permissionSet: NormalizedPermissionSet;
+  readonly companyTerms: CompanyAuthorityTermsInput;
 }
 
 export interface RecordApprovalRequest {

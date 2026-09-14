@@ -4,7 +4,7 @@ Kanon is a business agent-control runtime for company-deployed financial AI agen
 
 The core promise is simple: an agent receives exactly the authority a human approves, and a software update cannot silently widen that authority.
 
-This checkout has completed environment setup, the sponsor-independent T1A domain foundation, the live Privy feasibility spike, T1B final authority normalization, T2 permission diffing, the execution-method-aware Privy policy compiler, the authorized Sepolia ENSv2 proof, the ENS identity adapter, the T8 to T10 installation and runner boundaries, the live T11 to T13 activation, update, and revoke proof, and the T14 backend/API contract freeze. The API server and frontend implementation remain gated by the ordered build plan.
+This checkout has completed environment setup, the sponsor-independent T1A domain foundation, the live Privy feasibility spike, T1B final authority normalization, T2 permission diffing, the execution-method-aware Privy policy compiler, the authorized Sepolia ENSv2 proof, the ENS identity adapter, the T8 to T10 installation and runner boundaries, the live T11 to T13 activation, update, and revoke proof, the T14 backend/API contract freeze, and the owner-approved T15 frontend design implementation pass. The frontend reads live health and proof state through a server-side development proxy. The deployed organization and mutation routes required for the complete flow are not implemented yet and remain a fail-closed integration blocker.
 
 ## Canonical documentation
 
@@ -22,6 +22,7 @@ The Notion pages remain authoritative when a local pointer and the live page dif
 
 ```text
 apps/
+  web/
   runner/
 packages/
   manifest/
@@ -38,6 +39,8 @@ examples/
 The project is pinned to Node.js 22.23.2 and pnpm 11.5.0. From a clean checkout, use a Node.js 22 runtime and run:
 
 ```text
+
+For the approved frontend, run `pnpm dev:web`. The Vite proxy targets the deployed API and attaches `KANON_COMPANY_API_TOKEN` only in the server-side development process. Never expose that value through a `VITE_` variable or committed file.
 pnpm install
 pnpm typecheck
 pnpm test

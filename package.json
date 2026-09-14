@@ -2,7 +2,7 @@
   "name": "kanon",
   "version": "0.0.0",
   "private": true,
-  "description": "Kanon repository bootstrap. Product logic is intentionally deferred.",
+  "description": "Kanon business agent-control runtime and approved frontend workspace.",
   "type": "module",
   "packageManager": "pnpm@11.5.0",
   "engines": {
@@ -14,6 +14,8 @@
     "test": "vitest run",
     "lint": "eslint .",
     "format:check": "prettier --check .",
+    "build:web": "pnpm --filter @kanon/web build",
+    "dev:web": "pnpm --filter @kanon/web dev",
     "spike:privy": "node --env-file=.env.local --import=tsx apps/runner/src/privy-feasibility-spike.ts",
     "spike:privy:surface": "node --env-file=.env.local --import=tsx apps/runner/src/privy-surface-probes.ts",
     "spike:privy:compiler": "node --env-file=.env.local --import=tsx apps/runner/src/privy-policy-compiler-probe.ts",
@@ -26,11 +28,19 @@
     "@eslint/js": "9.35.0",
     "@types/node": "22.18.0",
     "@types/pg": "8.15.5",
+    "@types/react": "19.1.13",
+    "@types/react-dom": "19.1.9",
+    "@vitejs/plugin-react": "5.0.4",
     "eslint": "9.35.0",
     "prettier": "3.6.2",
+    "vite": "7.1.5",
+    "vitest": "3.2.4",
     "tsx": "4.23.13",
     "typescript": "5.9.2",
-    "typescript-eslint": "8.42.0",
-    "vitest": "3.2.4"
+    "typescript-eslint": "8.42.0"
+  },
+  "dependencies": {
+    "react": "19.1.1",
+    "react-dom": "19.1.1"
   }
 }

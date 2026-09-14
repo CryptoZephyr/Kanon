@@ -1,4 +1,6 @@
+import { randomUUID } from "node:crypto";
 import { Pool, type QueryResultRow } from "pg";
+import type { AgentRelease } from "../../manifest/src/index.js";
 import type { Installation } from "./index.js";
 
 export type DeploymentProofStatus = "running" | "passed" | "failed";
@@ -10,7 +12,27 @@ export interface DeploymentDatabase {
   readonly getInstallation: (
     installationId: string,
   ) => Promise<Installation | undefined>;
+  readonly findInstallationByAgent: (
+    organizationId: string,
+    agentId: string,
+  ) => Promise<Installation | undefined>;
   readonly saveInstallation: (installation: Installation) => Promise<void>;
+  readonly getRelease: (releaseId: string) => Promise<AgentRelease | undefined>;
+  readonly findReleaseByAgent: (
+    agentId: string,
+  ) => Promise<AgentRelease | undefined>;
+  readonly getReleaseForInstallation: (
+    installationId: string,
+  ) => Promise<AgentRelease | undefined>;
+  readonly saveRelease: (
+    release: AgentRelease,
+    installationId: string,
+  ) => Promise<void>;
+  readonly getEvidence: (installationId: string) => Promise<readonly unknown[]>;
+  readonly saveEvidence: (
+    installationId: string,
+    evidence: unknown,
+  ) => Promise<void>;
   readonly saveProof: (
     runId: string,
     status: DeploymentProofStatus,
@@ -63,6 +85,22 @@ export function createDeploymentDatabase(
       );
       CREATE INDEX IF NOT EXISTS kanon_proofs_updated_at_idx
         ON kanon_proofs (updated_at DESC);
+      CREATE TABLE IF NOT EXISTS kanon_releases (
+        release_id TEXT PRIMARY KEY,
+        installation_id TEXT NOT NULL,
+        release JSONB NOT NULL,
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS kanon_releases_installation_idx
+        ON kanon_releases (installation_id, updated_at DESC);
+      CREATE TABLE IF NOT EXISTS kanon_installation_evidence (
+        evidence_id UUID PRIMARY KEY,
+        installation_id TEXT NOT NULL,
+        evidence JSONB NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS kanon_installation_evidence_installation_idx
+        ON kanon_installation_evidence (installation_id, created_at DESC);
     `);
   };
 
@@ -80,6 +118,21 @@ export function createDeploymentDatabase(
       );
       return rows[0]?.state;
     },
+    findInstallationByAgent: async (organizationId, agentId) => {
+      const rows = await query<{ state: Installation }>(
+        pool,
+        `
+          SELECT state
+          FROM kanon_installations
+          WHERE state->>'organizationId' = $1
+            AND state->'release'->>'agentId' = $2
+          ORDER BY updated_at DESC
+          LIMIT 1
+        `,
+        [organizationId, agentId],
+      );
+      return rows[0]?.state;
+    },
     saveInstallation: async (installation) => {
       await pool.query(
         `
@@ -90,6 +143,78 @@ export function createDeploymentDatabase(
             updated_at = NOW()
         `,
         [installation.id, JSON.stringify(installation)],
+      );
+    },
+    getRelease: async (releaseId) => {
+      const rows = await query<{ release: AgentRelease }>(
+        pool,
+        "SELECT release FROM kanon_releases WHERE release_id = $1",
+        [releaseId],
+      );
+      return rows[0]?.release;
+    },
+    findReleaseByAgent: async (agentId) => {
+      const rows = await query<{ release: AgentRelease }>(
+        pool,
+        `
+          SELECT release
+          FROM kanon_releases
+          WHERE release->>'agentId' = $1
+          ORDER BY updated_at DESC
+          LIMIT 1
+        `,
+        [agentId],
+      );
+      return rows[0]?.release;
+    },
+    getReleaseForInstallation: async (installationId) => {
+      const rows = await query<{ release: AgentRelease }>(
+        pool,
+        `
+          SELECT release
+          FROM kanon_releases
+          WHERE installation_id = $1
+          ORDER BY updated_at DESC
+          LIMIT 1
+        `,
+        [installationId],
+      );
+      return rows[0]?.release;
+    },
+    saveRelease: async (release, installationId) => {
+      await pool.query(
+        `
+          INSERT INTO kanon_releases (release_id, installation_id, release, updated_at)
+          VALUES ($1, $2, $3::jsonb, NOW())
+          ON CONFLICT (release_id) DO UPDATE SET
+            installation_id = EXCLUDED.installation_id,
+            release = EXCLUDED.release,
+            updated_at = NOW()
+        `,
+        [release.releaseId, installationId, JSON.stringify(release)],
+      );
+    },
+    getEvidence: async (installationId) => {
+      const rows = await query<{ evidence: unknown }>(
+        pool,
+        `
+          SELECT evidence
+          FROM kanon_installation_evidence
+          WHERE installation_id = $1
+          ORDER BY created_at ASC
+        `,
+        [installationId],
+      );
+      return rows.map((row) => row.evidence);
+    },
+    saveEvidence: async (installationId, evidence) => {
+      await pool.query(
+        `
+          INSERT INTO kanon_installation_evidence
+            (evidence_id, installation_id, evidence)
+          VALUES ($1, $2, $3::jsonb)
+        `,
+        [randomUUID(), installationId, JSON.stringify(evidence)],
       );
     },
     saveProof: async (runId, status, proof) => {

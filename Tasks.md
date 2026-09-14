@@ -384,8 +384,10 @@ Deterministic authority hashing, human approval, real Privy wallet control, rest
 
 ## Frontend gate
 
-T15 is blocked by owner design. Do not invent layout, typography, components, dashboard structure, animation, or visual language.
+T15 owner design is approved in the canonical [FRONTEND.md](https://app.notion.com/p/3d8c5381831281e781e7cc5c72c4c9db) handoff. The implementation pass now contains the special landing page, exact approved logo asset, six approved screens, responsive Field / Structure / Signal styling, accessible controls, reduced-motion behavior, and a typed frontend client for the frozen API routes.
+
+The deployed API currently serves health and proof routes. The frozen organization, agent, installation, company-terms, approval, update-diff, evidence, and revoke routes return 404 from `https://kanon-api.onrender.com`. The frontend keeps these calls typed and fail-closed. Do not expose `KANON_COMPANY_API_TOKEN` in browser code, add a browser-side fallback authority model, or silently replace the missing routes with local-only product behavior.
 
 ## Next action
 
-T11, T12, T13, T14, and the owner-authorized T16 deployment are complete. The exact next action is T15, wait for the owner product-design handoff. Keep the frontend untouched until that design is supplied, keep both free Render services warm for any demo proof, and keep all ENS work on the authorized Sepolia namespace only.
+T15 visual implementation is in progress from the approved owner handoff. The exact blocker is the missing deployed API route implementation required for the full create, authority, approval, active, update, reauthorization, and revoke flow. Keep the frontend design locked, keep the company token server-side, and implement the already-frozen API route surface before claiming end-to-end completion.

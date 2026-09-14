@@ -27,7 +27,6 @@ import {
 } from "../../../packages/privy/src/t3-runtime.js";
 import {
   CHAIN_ID,
-  CONTROL_WALLET,
   WALLET_EXTERNAL_ID,
   createAggregation,
   createEnsRuntime,
@@ -85,11 +84,6 @@ async function controlContext(): Promise<ControlContext> {
   if (wallet.owner_id !== owner.keyQuorumId) {
     throw providerError(
       "the business wallet owner does not match the owner quorum",
-    );
-  }
-  if (wallet.address.toLowerCase() !== CONTROL_WALLET.toLowerCase()) {
-    throw providerError(
-      "the business wallet address does not match the control wallet",
     );
   }
   return { environment, client, owner, wallet };

@@ -56,7 +56,7 @@ The owner has resolved the build-order dependency. The detailed sequence is:
 14. T14 - Backend and API contract freeze.
 15. T15 - Owner frontend product-design handoff and implementation.
 16. T16 - Public backend deployment.
-17. T17 - Demo rehearsal and evidence freeze.
+17. T17 - Vercel frontend deployment, demo rehearsal, and evidence freeze.
 18. T18 - Submission artifacts.
 
 ## Current execution
@@ -291,11 +291,12 @@ Status: T11, T12, T13, T14, T15, and the owner-authorized T16 deployment complet
 - Official Privy MCP, official Privy Agent Skill, Privy machine-readable fallback docs, ENS machine-readable docs, and Context7 `/ensdomains/docs` remain configured and verified.
 - Render service health, Neon migration, private GitHub visibility, API authentication, and the remote lifecycle proof passed. Full deployment identifiers and evidence are in `evidence/deployment/render-neon-latest.json`.
 - The approved frontend implementation and live API lifecycle connection are complete. No mainnet or production ENS write was performed.
+- Vercel CLI `54.9.0` is authenticated, but no Kanon Vercel project or deployment exists. Public frontend deployment is the immediate T17 action and is documented in `DEPLOYMENT.md`.
 
 Deployment risk and sequence note:
 
 - The first remote proof failed closed because the persistent ENS fixture was already revoked. The existing T6 setup probe restored the exact approved baseline before the successful run. Future proof runs need an explicit owner-authorized baseline reset before starting.
-- The backend deployment occurred before the owner frontend handoff, but both T15 and T16 are now complete. T17 is the next milestone.
+- The backend deployment occurred before the owner frontend handoff, but both T15 and T16 are now complete. T17 is the next milestone. Its immediate action is the Vercel frontend deployment.
 
 ### T1A - Minimal agent/domain contract
 
@@ -402,12 +403,12 @@ T5 verification:
 
 Deterministic authority hashing, human approval, real Privy wallet control, restricted delegated signer behavior, real ENSv2 identity and permission evidence, isolated runner execution, allowed and forbidden action proof, update escalation blocking, real revoke, ENS revoked state, and post-revoke failure.
 
-## Frontend gate
+## Frontend status
 
 T15 owner design is approved in the canonical [FRONTEND.md](https://app.notion.com/p/3d8c5381831281e781e7cc5c72c4c9db) handoff. The implementation pass now contains the special landing page, exact approved logo asset, six approved screens, responsive Field / Structure / Signal styling, accessible controls, reduced-motion behavior, and a typed frontend client for the frozen API routes.
 
-The deployed API serves the frozen organization, agent, installation, company-terms, approval, update-diff, evidence, and revoke routes in addition to health and proof. Approval and reauthorization are asynchronous. The frontend keeps the company token server-side, polls configuration state, and remains fail-closed if authority does not reach `ACTIVE`. Do not add a browser-side authority fallback or silently replace the live lifecycle with local-only product behavior.
+The deployed API serves the frozen organization, agent, installation, company-terms, approval, update-diff, evidence, and revoke routes in addition to health and proof. Approval and reauthorization are asynchronous. The frontend keeps the company token server-side, polls configuration state, and remains fail-closed if authority does not reach `ACTIVE`. The live lifecycle is verified against Render, Neon, Privy, ENSv2, and the isolated runner. The frontend has not yet been deployed to Vercel.
 
 ## Next action
 
-T15 and T16 are complete. Proceed to T17 demo rehearsal and evidence freeze. Warm the free Render services before the demo, use the authorized Sepolia namespace only, and keep the frontend company token boundary unchanged.
+T15 and T16 are complete. Proceed to T17. The immediate action is to create or link the Kanon Vercel project, deploy `apps/web`, add a server-side `/api` proxy that attaches `KANON_COMPANY_API_TOKEN`, and verify the production frontend flow. Warm the free Render services before the demo, use the authorized Sepolia namespace only, and keep the frontend company token boundary unchanged.

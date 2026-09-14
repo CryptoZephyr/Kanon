@@ -13,6 +13,7 @@ The live Kanon documentation is maintained in the [Kanon Notion workspace](https
 - [Handoff.md](Handoff.md)
 - [Tasks.md](Tasks.md)
 - [Build.md](Build.md)
+- [DEPLOYMENT.md](DEPLOYMENT.md)
 - [AI_TOOLING.md](AI_TOOLING.md)
 - [FRONTEND.md](FRONTEND.md)
 
@@ -51,4 +52,4 @@ No real secrets belong in this repository. Copy the names in `.env.example` into
 
 ## Frontend
 
-The owner-approved frontend is implemented in `apps/web` with the exact approved logo, one landing page, and six application screens. Keep the visual system locked to [FRONTEND.md](FRONTEND.md). The next milestone is demo rehearsal and evidence freeze.
+The owner-approved frontend is implemented in `apps/web` with the exact approved logo, one landing page, and six application screens. Keep the visual system locked to [FRONTEND.md](FRONTEND.md). The next milestone is the Vercel frontend deployment, followed by demo rehearsal and evidence freeze. See [DEPLOYMENT.md](DEPLOYMENT.md) for the production proxy boundary.

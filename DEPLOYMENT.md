@@ -2,7 +2,7 @@
 
 Canonical deployment record for the current repository and hosted services.
 
-Status as of 2026-09-14: T15, T16, and T17 are complete. The approved frontend is live, its server-side API proxy is verified on deep routes, and three browser rehearsals completed the disposable create, approval, active, update, reauthorization, and revoke flow. The requested `kanon.agents.vercel.app` alias is unavailable because Vercel reserves `*.agents.vercel.app` for another account. The default production alias remains the verified public entry point.
+Status as of 2026-09-25: T15, T16, and T17 are complete. The approved frontend is live, its server-side API proxy is verified on deep routes, and three browser rehearsals completed the disposable create, approval, active, update, reauthorization, and revoke flow. The requested `kanon.agents.vercel.app` alias is unavailable because Vercel reserves `*.agents.vercel.app` for another account. The default production alias remains the verified public entry point.
 
 ## Repository
 

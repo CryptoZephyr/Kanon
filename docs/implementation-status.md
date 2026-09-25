@@ -37,7 +37,7 @@ The local suite covers the domain contract, deterministic permission hashing, pe
 ## Known limitations and blockers
 
 - This is a Sepolia hackathon proof, not a mainnet or production custody deployment.
-- The repository is licensed under the MIT License in `LICENSE`. GitHub visibility remains private pending an explicit owner decision.
+- The repository is public under the MIT License in `LICENSE`.
 - The exact `kanon.agents.vercel.app` alias is reserved for another Vercel account. The verified default Vercel alias is used.
 - Render free services can sleep after idle.
 - Render uses native Node.js services from `render.yaml`; unused Dockerfiles are excluded from the public repository.
@@ -46,7 +46,6 @@ The local suite covers the domain contract, deterministic permission hashing, pe
 
 ## Future work
 
-- Decide whether the private GitHub repository should become public.
 - Add a public demo recording and final submission artifacts.
 - Add the provider-failure rollback integration test.
 - Revisit stronger production operational controls after the testnet proof.

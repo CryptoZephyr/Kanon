@@ -7,7 +7,7 @@ Status as of 2026-09-14: T15, T16, and T17 are complete. The approved frontend i
 ## Repository
 
 - Repository: `https://github.com/CryptoZephyr/Kanon`
-- Visibility: private
+- Visibility: public
 - Branch: `main`
 - Previous verified application commit before this documentation reconciliation: `a5ebf6405c942631516ccfe630f9ab5c594c8879`
 - Source commit used for the current Vercel production deployment: `ed3e190`
@@ -79,7 +79,7 @@ Do not make a mainnet ENS write. Keep Render as the backend authority plane and 
 - `docs/implementation-status.md` separates live, tested, blocked, and future work.
 - `.github/workflows/ci.yml` runs the pinned Node.js and pnpm install, typecheck, test, lint, format, and frontend build checks on `main` pushes and pull requests.
 - Relative links in the public documentation resolve locally, the tracked-file secret-pattern scan returned no real credential matches, and the live Vercel browser surface passed the landing, workspace, API connection, namespace readback, agent detail, reload, and console checks.
-- GitHub visibility remains private. The repository now includes the MIT License in `LICENSE`; changing visibility remains an explicit owner decision.
+- GitHub visibility is public. The repository includes the MIT License in `LICENSE`.
 
 ## Evidence and checks
 

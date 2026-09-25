@@ -49,4 +49,4 @@ The exact `kanon.agents.vercel.app` hostname is reserved for another Vercel acco
 
 ## Repository and license state
 
-The GitHub repository is currently private. The repository includes the MIT License in `LICENSE`. Changing GitHub visibility remains an owner decision.
+The GitHub repository is public and includes the MIT License in `LICENSE`.

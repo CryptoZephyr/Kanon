@@ -4,6 +4,11 @@
   "installCommand": "pnpm install --frozen-lockfile",
   "buildCommand": "pnpm build:web",
   "outputDirectory": "apps/web/dist",
+  "functions": {
+    "api/kanon-proxy.ts": {
+      "maxDuration": 120
+    }
+  },
   "routes": [
     {
       "src": "/api$",

@@ -1,4 +1,4 @@
-import { randomUUID, timingSafeEqual } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import {
   createServer,
   type IncomingMessage,
@@ -23,6 +23,7 @@ import {
   createApiError,
   createApiSuccess,
   createAgentCapabilityResource,
+  createExecutionEvidence,
   createExecutionEvidenceResource,
   createInstallation,
   createInstallationResource,
@@ -30,12 +31,15 @@ import {
   createOrganizationResource,
   createRevocationEvidenceResource,
   createRevocationRecord,
+  createRetirementRecord,
   createHumanDecision,
   createUpdateDiffResource,
   createWalletResource,
   transitionInstallation,
   type ApiEvidenceResource,
   type ApiErrorCode,
+  type ExecutionEvidence,
+  type HumanDecision,
   type Installation,
 } from "../../../packages/shared/src/index.js";
 import {
@@ -44,19 +48,38 @@ import {
 } from "../../../packages/shared/src/deployment-db.js";
 import {
   cleanupRevokedAuthority,
+  clearOrphanedDelegatedAuthority,
   configureLiveAuthority,
   createReleaseFromInput,
   readLiveWallet,
   readVerifiedEnsState,
   revokeLiveAuthority,
 } from "./authority-service.js";
+import {
+  assertDemoRouteAllowed,
+  assertDemoTermsWithinEnvelope,
+  createDemoRateLimiter,
+  DemoGuardError,
+  executionRequestForScenario,
+  resolveRole,
+  type ApiRole,
+} from "./demo-guard.js";
+import { leaseDecision, leaseTtlMs } from "./demo-lease.js";
 import { runLifecycleProof } from "../../runner/src/lifecycle-t11-t13-probe.js";
-import { createRunnerContext } from "../../runner/src/isolated-runner.js";
+import {
+  createRunnerContext,
+  type RunnerContext,
+} from "../../runner/src/isolated-runner.js";
+import { DEFAULT_FORBIDDEN_RECIPIENT } from "../../../packages/privy/src/t3-runtime.js";
 
 const PORT = parsePort(process.env.PORT);
 const COMPANY_TOKEN = requiredEnvironment("KANON_COMPANY_API_TOKEN");
+const DEMO_TOKEN = process.env.KANON_DEMO_API_TOKEN || undefined;
 const RUNNER_BASE_URL = requiredEnvironment("RUNNER_BASE_URL");
 const RUNNER_SHARED_SECRET = requiredEnvironment("RUNNER_SHARED_SECRET");
+const RELEASE_LABEL = "kanon-3rd-web-hack-2026.09";
+const LEASE_TTL_MS = leaseTtlMs();
+const demoRateLimiter = createDemoRateLimiter();
 const ORGANIZATION_ID = "organization-kanon";
 const ORGANIZATION = createOrganization({
   id: ORGANIZATION_ID,
@@ -105,14 +128,16 @@ function requestId(request: IncomingMessage): string {
   return typeof value === "string" && value.length > 0 ? value : randomUUID();
 }
 
-function companyAuthorized(request: IncomingMessage): boolean {
-  const value = request.headers["x-kanon-company-token"];
-  if (typeof value !== "string") return false;
-  const expected = Buffer.from(COMPANY_TOKEN, "utf8");
-  const received = Buffer.from(value, "utf8");
-  return (
-    expected.length === received.length && timingSafeEqual(expected, received)
-  );
+function resolveRequestRole(request: IncomingMessage): ApiRole | undefined {
+  return resolveRole(request.headers, {
+    companyToken: COMPANY_TOKEN,
+    ...(DEMO_TOKEN === undefined ? {} : { demoToken: DEMO_TOKEN }),
+  });
+}
+
+function clientKey(request: IncomingMessage): string {
+  const value = request.headers["x-kanon-client-ip"];
+  return typeof value === "string" && value.length > 0 ? value : "unknown";
 }
 
 async function readBody(request: IncomingMessage): Promise<unknown> {
@@ -189,6 +214,7 @@ class ResourceError extends Error {
     message: string,
     public readonly code: ApiErrorCode,
     public readonly status: number,
+    public readonly details?: Readonly<Record<string, string>>,
   ) {
     super(message);
     this.name = "ResourceError";
@@ -406,22 +432,265 @@ async function assertRunnerRejected(
   throw new Error("post-revoke delegated execution was not rejected");
 }
 
+async function performRevocation(
+  database: DeploymentDatabase,
+  existing: Installation,
+  decision: HumanDecision,
+): Promise<Installation> {
+  const context = createRunnerContext({
+    ...existing,
+    status: "ACTIVE",
+  });
+  const revoking =
+    existing.status === "REVOKING"
+      ? existing
+      : transitionInstallation(existing, {
+          type: "revoke_requested",
+          decision,
+        });
+  if (existing.status !== "REVOKING") {
+    await database.saveInstallation(revoking);
+  }
+  const revokedPrivy = await revokeLiveAuthority(existing);
+  await assertRunnerRejected(existing, context);
+  const ens = await readVerifiedEnsState(existing);
+  const ensRuntime = await import(
+    "../../runner/src/lifecycle-t11-t13-probe.js"
+  ).then((module) => module.createEnsRuntime());
+  const revokePlan = createRevokedStatusWritePlan({
+    binding: ens.binding,
+    current: {
+      agentId: existing.release.agentId,
+      releaseId: existing.release.releaseId,
+      permissionHash: existing.permissionSet.permissionHash,
+      status: ens.status,
+    },
+    privyAuthority: "REVOKED",
+  });
+  await writeRevokedStatus(ensRuntime.revocationWriter, revokePlan);
+  const revokedState = {
+    ...ens,
+    status: "revoked" as const,
+    observedAt: new Date().toISOString(),
+  };
+  const revocation = createRevocationRecord({
+    decisionId: decision.id,
+    privyAuthorityRevoked: true,
+    postRevokeExecutionFailed: true,
+    recordedAt: new Date().toISOString(),
+  });
+  const completed = transitionInstallation(revoking, {
+    type: "revocation_completed",
+    decision,
+    revocation,
+  });
+  await database.saveEvidence(existing.id, revocation);
+  const finalInstallation = { ...completed, ens: revokedState };
+  await database.saveInstallation(finalInstallation);
+  try {
+    await cleanupRevokedAuthority(revokedPrivy);
+  } catch {
+    // The delegated signer is already removed. Orphaned policy metadata is not executable.
+  }
+  return finalInstallation;
+}
+
+async function retireStaleInstallation(
+  database: DeploymentDatabase,
+  stale: Installation,
+): Promise<void> {
+  await clearOrphanedDelegatedAuthority();
+  let ensRevokedWritten = false;
+  try {
+    const ensRuntime = await import(
+      "../../runner/src/lifecycle-t11-t13-probe.js"
+    ).then((module) => module.createEnsRuntime());
+    const observed = await ensRuntime.adapter.readApprovedState(
+      ensRuntime.identity,
+    );
+    const records = observed.records;
+    if (
+      records["kanon.agentId"] === stale.release.agentId &&
+      records["kanon.release"] === stale.release.releaseId &&
+      records["kanon.permissionHash"] === stale.permissionSet.permissionHash &&
+      records["kanon.status"] !== "revoked"
+    ) {
+      const plan = createRevokedStatusWritePlan({
+        binding: observed.binding,
+        current: {
+          agentId: stale.release.agentId,
+          releaseId: stale.release.releaseId,
+          permissionHash: stale.permissionSet.permissionHash,
+          status: records["kanon.status"] === "active" ? "active" : "approved",
+        },
+        privyAuthority: "REVOKED",
+      });
+      await writeRevokedStatus(ensRuntime.revocationWriter, plan);
+      ensRevokedWritten = true;
+    }
+  } catch (error) {
+    console.error(`kanon_retire_ens_unavailable=${safeErrorCode(error)}`);
+  }
+  const retired = transitionInstallation(stale, {
+    type: "authority_retired",
+    retirement: createRetirementRecord({
+      reason: "demo-session-expiry",
+      retiredAt: new Date().toISOString(),
+      privySignerCountAfter: 0,
+      ensRevokedWritten,
+    }),
+  });
+  await database.saveInstallation(retired);
+}
+
+async function expireStaleInstallation(
+  database: DeploymentDatabase,
+  stale: Installation,
+): Promise<void> {
+  if (stale.status === "ACTIVE" || stale.status === "UPDATE_AVAILABLE") {
+    try {
+      const candidate =
+        stale.status === "UPDATE_AVAILABLE"
+          ? transitionInstallation(stale, { type: "update_withdrawn" })
+          : stale;
+      const decision = createHumanDecision({
+        id: `decision-expiry-${randomUUID().slice(0, 8)}`,
+        action: "REVOKE",
+        outcome: "APPROVED",
+        decidedBy: "demo-operator-session-expiry-policy",
+        decidedAt: new Date().toISOString(),
+        release: stale.release,
+        permissionSet: stale.permissionSet,
+      });
+      await performRevocation(database, candidate, decision);
+      return;
+    } catch (error) {
+      console.error(
+        `kanon_expiry_revoke_failed=${stale.id}:${safeErrorCode(error)}`,
+      );
+    }
+  }
+  await retireStaleInstallation(database, stale);
+}
+
+function sessionUnavailableError(error: unknown): ResourceError {
+  console.error(`kanon_session_expiry_failed=${safeErrorCode(error)}`);
+  return new ResourceError(
+    "the shared demo fixture could not be released; retry shortly",
+    "INTERNAL_ERROR",
+    503,
+  );
+}
+
+async function assertSessionLease(
+  database: DeploymentDatabase,
+  requesting: Installation,
+): Promise<void> {
+  const live = await database.listLiveInstallations(requesting.organizationId);
+  const decision = leaseDecision({
+    requestingInstallationId: requesting.id,
+    live,
+    now: Date.now(),
+    ttlMs: LEASE_TTL_MS,
+    inFlightIds: new Set(authorityOperations.keys()),
+  });
+  if (decision.kind === "busy") {
+    throw new ResourceError(
+      "another hosted-demo session is live on the shared fixture",
+      "DEMO_SESSION_ACTIVE",
+      409,
+      {
+        retryAfterSeconds: String(decision.retryAfterSeconds),
+        installationId: decision.installationId,
+      },
+    );
+  }
+  try {
+    if (decision.kind === "expire") {
+      for (const stale of decision.installations) {
+        if (authorityOperations.has(stale.id)) continue;
+        await expireStaleInstallation(database, stale);
+      }
+    }
+    await clearOrphanedDelegatedAuthority();
+  } catch (error) {
+    throw sessionUnavailableError(error);
+  }
+}
+
+type RunnerExecutionResult =
+  | { readonly kind: "evidence"; readonly evidence: ExecutionEvidence }
+  | { readonly kind: "refused"; readonly code: string };
+
+async function postRunnerExecution(
+  installationId: string,
+  context: RunnerContext,
+  request: { readonly to: string; readonly valueWei: string },
+): Promise<RunnerExecutionResult> {
+  let response: Response;
+  try {
+    response = await fetch(
+      `${RUNNER_BASE_URL.replace(/\/$/, "")}/internal/execute`,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-runner-shared-secret": RUNNER_SHARED_SECRET,
+        },
+        body: JSON.stringify({ installationId, context, request }),
+        signal: AbortSignal.timeout(100_000),
+      },
+    );
+  } catch {
+    throw new ResourceError(
+      "the execution runner is unreachable",
+      "UPSTREAM_FAILED",
+      502,
+    );
+  }
+  const payload = (await response.json().catch(() => ({}))) as unknown;
+  if (response.status === 409) {
+    return {
+      kind: "refused",
+      code:
+        record(payload) && typeof payload.code === "string"
+          ? payload.code
+          : "RUNNER_REFUSED_STALE_OR_REVOKED",
+    };
+  }
+  if (!response.ok) {
+    throw new ResourceError(
+      "the execution runner could not complete the request",
+      "UPSTREAM_FAILED",
+      502,
+    );
+  }
+  if (!record(payload) || !record(payload.evidence)) {
+    throw new ResourceError(
+      "the execution runner returned an invalid response",
+      "UPSTREAM_FAILED",
+      502,
+    );
+  }
+  return {
+    kind: "evidence",
+    evidence: payload.evidence as unknown as ExecutionEvidence,
+  };
+}
+
 async function handleOrganizationRequest(
   request: IncomingMessage,
   response: ServerResponse,
   database: DeploymentDatabase,
   url: URL,
   id: string,
+  role: ApiRole,
 ): Promise<void> {
-  if (!companyAuthorized(request)) {
-    fail(
-      response,
-      401,
-      "UNAUTHORIZED",
-      "company authorization is required",
-      id,
-    );
-    return;
+  if (role === "demo") {
+    assertDemoRouteAllowed(request.method ?? "GET", url.pathname);
+    if (request.method === "POST") {
+      demoRateLimiter.assertMutationAllowed(clientKey(request));
+    }
   }
 
   const organizationMatch = url.pathname.match(
@@ -471,11 +740,54 @@ async function handleOrganizationRequest(
       release: body.release as AgentRelease,
     });
     assertValidAgentRelease(release);
-    const current = await database.findInstallationByAgent(
-      organizationId,
-      agentId,
-    );
-    const installationId = current?.id ?? `installation-${release.releaseId}`;
+    let installationId: string;
+    if (body.installationId !== undefined) {
+      const requested = body.installationId;
+      if (
+        typeof requested !== "string" ||
+        !/^installation-[A-Za-z0-9._-]{1,120}$/.test(requested)
+      ) {
+        throw new Error(
+          "installationId must match installation-<id> with letters, digits, '.', '_' or '-'",
+        );
+      }
+      const bound = await database.getInstallation(requested);
+      if (bound) {
+        if (bound.release.agentId !== agentId) {
+          throw new ResourceError(
+            "installation is bound to a different agent",
+            "CONFLICT",
+            409,
+          );
+        }
+        if (bound.status === "REVOKED") {
+          throw new ResourceError(
+            "revoked installation cannot accept new releases",
+            "REVOKED",
+            409,
+          );
+        }
+      }
+      installationId = requested;
+    } else {
+      const current = await database.findInstallationByAgent(
+        organizationId,
+        agentId,
+      );
+      installationId = current?.id ?? `installation-${release.releaseId}`;
+    }
+    if (role === "demo") {
+      const boundTo = await database.getReleaseInstallationId(
+        release.releaseId,
+      );
+      if (boundTo !== undefined && boundTo !== installationId) {
+        throw new ResourceError(
+          "release is already bound to a different installation",
+          "CONFLICT",
+          409,
+        );
+      }
+    }
     await database.saveRelease(release, installationId);
     sendJson(
       response,
@@ -499,8 +811,36 @@ async function handleOrganizationRequest(
     return;
   }
 
+  if (request.method === "GET" && tail === "installations") {
+    const limitParam = Number(url.searchParams.get("limit") ?? "5");
+    const limit = Number.isInteger(limitParam)
+      ? Math.min(Math.max(limitParam, 1), 20)
+      : 5;
+    const rows = await database.listRecentInstallations(organizationId, limit);
+    const resources = [];
+    for (const row of rows) {
+      const pendingDiff = row.installation.pendingUpdate
+        ? diffPermissionSets(
+            row.installation.permissionSet,
+            row.installation.pendingUpdate.permissionSet,
+          )
+        : undefined;
+      resources.push(
+        createInstallationResource({
+          installation: row.installation,
+          ...(pendingDiff === undefined ? {} : { pendingDiff }),
+          ...(row.installation.status === "ACTIVE" && row.installation.ens
+            ? { ensReadback: ensReadback(row.installation.ens) }
+            : {}),
+        }),
+      );
+    }
+    sendJson(response, 200, createApiSuccess(resources));
+    return;
+  }
+
   const installationMatch = tail.match(
-    /^installations\/([^/]+)(?:\/(company-terms|approval|update-diff|evidence|revoke))?$/,
+    /^installations\/([^/]+)(?:\/(company-terms|approval|update-diff|evidence|revoke|executions|reject-update))?$/,
   );
   if (!installationMatch) {
     fail(response, 404, "NOT_FOUND", "resource was not found", id);
@@ -537,6 +877,11 @@ async function handleOrganizationRequest(
     const rawTerms = bodyRecord(
       body.companyTerms,
     ) as unknown as CompanyAuthorityTermsInput;
+    if (role === "demo") {
+      assertDemoTermsWithinEnvelope(rawTerms, {
+        controlWallet: ORGANIZATION.controlWallet,
+      });
+    }
     const companyTerms = createCompanyAuthorityTerms(rawTerms);
     const permissionSet = createNormalizedPermissionSet({
       release,
@@ -664,6 +1009,7 @@ async function handleOrganizationRequest(
     );
     let configuring = existing;
     if (existing.status === "AWAITING_APPROVAL") {
+      await assertSessionLease(database, existing);
       configuring = transitionInstallation(existing, {
         type: "approval_granted",
         decision,
@@ -715,65 +1061,147 @@ async function handleOrganizationRequest(
       existing.release,
       existing.permissionSet,
     );
-    const context = createRunnerContext({
-      ...existing,
-      status: "ACTIVE",
-    });
-    const revoking =
-      existing.status === "REVOKING"
-        ? existing
-        : transitionInstallation(existing, {
-            type: "revoke_requested",
-            decision,
-          });
-    if (existing.status !== "REVOKING") {
-      await database.saveInstallation(revoking);
-    }
-    const revokedPrivy = await revokeLiveAuthority(existing);
-    await assertRunnerRejected(existing, context);
-    const ens = await readVerifiedEnsState(existing);
-    const ensRuntime = await import(
-      "../../runner/src/lifecycle-t11-t13-probe.js"
-    ).then((module) => module.createEnsRuntime());
-    const revokePlan = createRevokedStatusWritePlan({
-      binding: ens.binding,
-      current: {
-        agentId: existing.release.agentId,
-        releaseId: existing.release.releaseId,
-        permissionHash: existing.permissionSet.permissionHash,
-        status: ens.status,
-      },
-      privyAuthority: "REVOKED",
-    });
-    await writeRevokedStatus(ensRuntime.revocationWriter, revokePlan);
-    const revokedState = {
-      ...ens,
-      status: "revoked" as const,
-      observedAt: new Date().toISOString(),
-    };
-    const revocation = createRevocationRecord({
-      decisionId: decision.id,
-      privyAuthorityRevoked: true,
-      postRevokeExecutionFailed: true,
-      recordedAt: new Date().toISOString(),
-    });
-    const completed = transitionInstallation(revoking, {
-      type: "revocation_completed",
+    const finalInstallation = await performRevocation(
+      database,
+      existing,
       decision,
-      revocation,
-    });
-    await database.saveEvidence(installationId, revocation);
-    const finalInstallation = { ...completed, ens: revokedState };
-    await database.saveInstallation(finalInstallation);
-    try {
-      await cleanupRevokedAuthority(revokedPrivy);
-    } catch {
-      // The delegated signer is already removed. Orphaned policy metadata is not executable.
-    }
+    );
     sendJson(
       response,
       200,
       createApiSuccess(await installationResource(database, finalInstallation)),
+    );
+    return;
+  }
+
+  if (request.method === "POST" && operation === "executions") {
+    const body = bodyRecord(await readBody(request));
+    verifyEnvelope(body, "kanon.api.execution-request");
+    if (body.installationId !== installationId) {
+      throw new Error("installationId does not match the URL");
+    }
+    const scenario = body.scenario;
+    if (scenario !== "ALLOWED" && scenario !== "FORBIDDEN") {
+      throw new Error("scenario must be ALLOWED or FORBIDDEN");
+    }
+    const existing = await database.getInstallation(installationId);
+    if (!existing)
+      throw new ResourceError("installation was not found", "NOT_FOUND", 404);
+    if (role === "demo") {
+      demoRateLimiter.assertExecutionAllowed(installationId);
+    }
+    const target = executionRequestForScenario(
+      existing.permissionSet,
+      scenario,
+      DEFAULT_FORBIDDEN_RECIPIENT,
+    );
+
+    if (existing.status === "ACTIVE") {
+      const context = createRunnerContext(existing);
+      const result = await postRunnerExecution(installationId, context, target);
+      if (result.kind === "refused") {
+        throw new ResourceError(
+          `the execution runner refused the request: ${result.code}`,
+          "CONFLICT",
+          409,
+        );
+      }
+      await database.saveEvidence(installationId, result.evidence);
+      await database.saveInstallation(existing);
+      sendJson(
+        response,
+        200,
+        createApiSuccess(await installationResource(database, existing)),
+      );
+      return;
+    }
+
+    if (existing.status === "REVOKED") {
+      const binding = existing.privy;
+      if (!binding) {
+        throw new ResourceError(
+          "installation has no recorded Privy binding",
+          "CONFLICT",
+          409,
+        );
+      }
+      const context: RunnerContext = {
+        installationId: existing.id,
+        generation: existing.generation,
+        permissionHash: binding.permissionHash,
+        executionMethod: binding.executionMethod,
+        delegatedAuthority: {
+          walletId: binding.walletId,
+          delegatedSignerId: binding.delegatedSignerId,
+          policyId: binding.policyId,
+        },
+      };
+      const result = await postRunnerExecution(existing.id, context, target);
+      if (result.kind === "evidence") {
+        if (result.evidence.outcome === "SUCCEEDED") {
+          console.error("kanon_post_revoke_execution_succeeded");
+          throw new ResourceError(
+            "delegated execution succeeded on a revoked installation",
+            "INTERNAL_ERROR",
+            500,
+          );
+        }
+        await database.saveEvidence(installationId, result.evidence);
+        sendJson(
+          response,
+          200,
+          createApiSuccess(await installationResource(database, existing)),
+        );
+        return;
+      }
+      const evidence = createExecutionEvidence({
+        installationId: existing.id,
+        generation: existing.generation,
+        permissionHash: binding.permissionHash,
+        executionMethod: binding.executionMethod,
+        outcome: "REJECTED",
+        rejectionCode: result.code,
+        recordedAt: new Date().toISOString(),
+      });
+      await database.saveEvidence(installationId, evidence);
+      sendJson(
+        response,
+        200,
+        createApiSuccess(await installationResource(database, existing)),
+      );
+      return;
+    }
+
+    throw new ResourceError(
+      `executions require an active or revoked installation, got ${existing.status}`,
+      "CONFLICT",
+      409,
+    );
+  }
+
+  if (request.method === "POST" && operation === "reject-update") {
+    const body = bodyRecord(await readBody(request));
+    verifyEnvelope(body, "kanon.api.reject-update");
+    if (body.installationId !== installationId) {
+      throw new Error("installationId does not match the URL");
+    }
+    const existing = await database.getInstallation(installationId);
+    if (!existing)
+      throw new ResourceError("installation was not found", "NOT_FOUND", 404);
+    if (existing.status !== "UPDATE_AVAILABLE") {
+      throw new ResourceError(
+        `reject-update requires a pending update, got ${existing.status}`,
+        "CONFLICT",
+        409,
+      );
+    }
+    const withdrawn = transitionInstallation(existing, {
+      type: "update_withdrawn",
+    });
+    sendJson(
+      response,
+      200,
+      createApiSuccess(await saveAndRenderInstallation(database, withdrawn)),
     );
     return;
   }
@@ -797,6 +1225,7 @@ async function handleRequest(
         version: 1,
         status: "ok",
         service: "api",
+        release: RELEASE_LABEL,
         database: "ok",
         requestId: id,
       });
@@ -806,6 +1235,7 @@ async function handleRequest(
         version: 1,
         status: "degraded",
         service: "api",
+        release: RELEASE_LABEL,
         database: "unavailable",
         requestId: id,
       });
@@ -846,13 +1276,107 @@ async function handleRequest(
     return;
   }
 
-  if (request.method === "POST" && url.pathname === "/v1/proof/run") {
-    if (!companyAuthorized(request)) {
+  if (request.method === "GET" && url.pathname === "/v1/status") {
+    const role = resolveRequestRole(request);
+    if (role === undefined) {
       fail(
         response,
         401,
         "UNAUTHORIZED",
         "company authorization is required",
+        id,
+      );
+      return;
+    }
+    const [databaseStatus, runnerStatus, live] = await Promise.all([
+      database.pool
+        .query("SELECT 1")
+        .then(() => "ok" as const)
+        .catch(() => "unavailable" as const),
+      fetch(`${RUNNER_BASE_URL.replace(/\/$/, "")}/healthz`, {
+        signal: AbortSignal.timeout(8_000),
+      })
+        .then((result) =>
+          result.ok ? ("ok" as const) : ("unavailable" as const),
+        )
+        .catch(() => "unavailable" as const),
+      database
+        .listLiveInstallations(ORGANIZATION_ID)
+        .catch(
+          () =>
+            [] as Awaited<
+              ReturnType<DeploymentDatabase["listLiveInstallations"]>
+            >,
+        ),
+    ]);
+    const now = Date.now();
+    const fresh = live.filter(
+      (entry) =>
+        authorityOperations.has(entry.installation.id) ||
+        now - entry.updatedAt.getTime() < LEASE_TTL_MS,
+    );
+    const freshest = fresh.reduce<(typeof fresh)[number] | undefined>(
+      (latest, entry) =>
+        latest === undefined || entry.updatedAt > latest.updatedAt
+          ? entry
+          : latest,
+      undefined,
+    );
+    sendJson(response, 200, {
+      schema: "kanon.api.status",
+      version: 1,
+      release: RELEASE_LABEL,
+      api: "ok",
+      database: databaseStatus,
+      runner: runnerStatus,
+      demo: {
+        leaseTtlSeconds: Math.round(LEASE_TTL_MS / 1000),
+        liveSession:
+          freshest === undefined
+            ? null
+            : {
+                installationId: freshest.installation.id,
+                status: freshest.installation.status,
+                ageSeconds: Math.max(
+                  0,
+                  Math.floor((now - freshest.updatedAt.getTime()) / 1000),
+                ),
+                expiresInSeconds: authorityOperations.has(
+                  freshest.installation.id,
+                )
+                  ? Math.round(LEASE_TTL_MS / 1000)
+                  : Math.max(
+                      0,
+                      Math.ceil(
+                        (LEASE_TTL_MS - (now - freshest.updatedAt.getTime())) /
+                          1000,
+                      ),
+                    ),
+              },
+      },
+      requestId: id,
+    });
+    return;
+  }
+
+  if (request.method === "POST" && url.pathname === "/v1/proof/run") {
+    const role = resolveRequestRole(request);
+    if (role === undefined) {
+      fail(
+        response,
+        401,
+        "UNAUTHORIZED",
+        "company authorization is required",
+        id,
+      );
+      return;
+    }
+    if (role !== "operator") {
+      fail(
+        response,
+        403,
+        "FORBIDDEN",
+        "the demo role cannot run deployment proofs",
         id,
       );
       return;
@@ -887,7 +1411,18 @@ async function handleRequest(
   }
 
   if (url.pathname.startsWith("/v1/organizations/")) {
-    await handleOrganizationRequest(request, response, database, url, id);
+    const role = resolveRequestRole(request);
+    if (role === undefined) {
+      fail(
+        response,
+        401,
+        "UNAUTHORIZED",
+        "company authorization is required",
+        id,
+      );
+      return;
+    }
+    await handleOrganizationRequest(request, response, database, url, id, role);
     return;
   }
 
@@ -899,13 +1434,14 @@ async function main(): Promise<void> {
   await database.migrate();
   const server = createServer((request, response) => {
     void handleRequest(request, response, database).catch((error: unknown) => {
-      if (error instanceof ResourceError) {
+      if (error instanceof ResourceError || error instanceof DemoGuardError) {
         fail(
           response,
           error.status,
           error.code,
           error.message,
           requestId(request),
+          error.details,
         );
         return;
       }

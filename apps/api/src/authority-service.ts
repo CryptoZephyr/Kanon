@@ -406,6 +406,20 @@ export async function cleanupRevokedAuthority(
   }
 }
 
+export async function clearOrphanedDelegatedAuthority(): Promise<void> {
+  const context = await controlContext();
+  if (context.wallet.additional_signers.length === 0) {
+    return;
+  }
+  await removeAgentPolicy(context.client, context.wallet.id, context.owner);
+  const readback = await context.client.wallets().get(context.wallet.id);
+  if (readback.additional_signers.length !== 0) {
+    throw providerError(
+      "Privy still reports delegated authority after orphan cleanup",
+    );
+  }
+}
+
 export async function readVerifiedEnsState(
   installation: Installation,
 ): Promise<ENSRecordState> {

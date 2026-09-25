@@ -92,8 +92,8 @@ export const REPRESENTATIVE_AGENT_OWNER = getAddress(
   "0x42D5Fb257d479187607D47C19433Be6aEEd4a9A9",
 );
 export const AGENT_ID = "com.example.treasury";
-const RELEASE_A_ID = "release-t6-ethonline-2026";
-const RELEASE_B_ID = "release-t12-expanded-ethonline-2026";
+const RELEASE_A_ID = "release-a-3rd-web-hack-2026";
+const RELEASE_B_ID = "release-b-3rd-web-hack-2026";
 export const AGENT_NAME =
   "representative-agent.agents.kanon-ethonline-2026.eth";
 export const ORGANIZATION_NAME = "kanon-ethonline-2026.eth";
@@ -664,15 +664,6 @@ export async function runLifecycleProof(
     permissionSet: permissionSetA,
     status: "approved",
   });
-  const initialVerification = await ens.adapter.verifyApprovedState(
-    ens.identity,
-    expectedA,
-  );
-  if (!initialVerification.ok) {
-    throw new Error(
-      `T11 requires the existing ENS approved state, mismatches: ${initialVerification.mismatches.join(",")}`,
-    );
-  }
 
   const aggregationRequirementsA = buildPrivyAggregationRequirements({
     permissionSet: permissionSetA,
@@ -780,6 +771,7 @@ export async function runLifecycleProof(
   let installation: Installation;
   let policyB: Policy | undefined;
   let aggregationB: Aggregation | undefined;
+  let ensWriteA: readonly string[] = [];
   let ensWriteB: readonly string[] = [];
   let ensWriteRevoked: readonly string[] = [];
   let policyADeleted = false;
@@ -804,6 +796,37 @@ export async function runLifecycleProof(
     );
     if (!t11DelegatedSignerAttached) {
       throw new Error("T11 wallet readback did not show the delegated signer");
+    }
+
+    let baselineVerification = await ens.adapter.verifyApprovedState(
+      ens.identity,
+      expectedA,
+    );
+    let ensBaseline: "already-approved" | "written-after-privy-attach" =
+      "already-approved";
+    if (!baselineVerification.ok) {
+      const writePlanA = createApprovedStateWritePlan({
+        binding: ens.identity,
+        state: expectedA,
+        authorization: {
+          lifecycle: "ACTIVE",
+          privyAuthority: "ACTIVE",
+          agentId: releaseA.agentId,
+          releaseId: releaseA.releaseId,
+          permissionHash: permissionSetA.permissionHash,
+        },
+      });
+      ensWriteA = await writeApprovedState(ens.writer, writePlanA);
+      ensBaseline = "written-after-privy-attach";
+      baselineVerification = await ens.adapter.verifyApprovedState(
+        ens.identity,
+        expectedA,
+      );
+      if (!baselineVerification.ok) {
+        throw new Error(
+          `T11 ENS baseline did not read back: ${baselineVerification.mismatches.join(",")}`,
+        );
+      }
     }
 
     const ensStateA = ensStateFromRead(
@@ -1176,7 +1199,9 @@ export async function runLifecycleProof(
         humanDecisionId: approvalA.id,
         installationStatus: installation.status,
         delegatedSignerAttached: t11DelegatedSignerAttached,
-        ensReadback: initialVerification.observed.records,
+        ensBaseline,
+        ensWrites: ensWriteA,
+        ensReadback: baselineVerification.observed.records,
         allowedExecution: allowedA,
         forbiddenExecution: forbiddenA,
       },

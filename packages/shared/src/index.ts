@@ -122,6 +122,15 @@ export interface RevocationRecord {
   readonly recordedAt: string;
 }
 
+export interface RetirementRecord {
+  readonly schema: "kanon.retirement-record";
+  readonly version: 1;
+  readonly reason: string;
+  readonly retiredAt: string;
+  readonly privySignerCountAfter: number;
+  readonly ensRevokedWritten: boolean;
+}
+
 export interface Installation {
   readonly schema: "kanon.installation";
   readonly version: 1;
@@ -136,6 +145,7 @@ export interface Installation {
   readonly ens?: ENSRecordState;
   readonly pendingUpdate?: UpdateProposal;
   readonly revocation?: RevocationRecord;
+  readonly retirement?: RetirementRecord;
 }
 
 export type InstallationEvent =
@@ -149,6 +159,7 @@ export type InstallationEvent =
       readonly permissionSet?: NormalizedPermissionSet;
     }
   | { readonly type: "update_available"; readonly proposal: UpdateProposal }
+  | { readonly type: "update_withdrawn" }
   | {
       readonly type: "reauthorization_requested";
       readonly decision: HumanDecision;
@@ -158,6 +169,10 @@ export type InstallationEvent =
       readonly type: "revocation_completed";
       readonly decision: HumanDecision;
       readonly revocation: RevocationRecord;
+    }
+  | {
+      readonly type: "authority_retired";
+      readonly retirement: RetirementRecord;
     };
 
 function nonBlank(value: unknown, field: string): string {
@@ -461,6 +476,16 @@ export function transitionInstallation(
         status: "UPDATE_AVAILABLE",
         pendingUpdate: event.proposal,
       };
+    case "update_withdrawn":
+      requireStatus(installation, "UPDATE_AVAILABLE", event.type);
+      if (!installation.pendingUpdate) {
+        throw new Error("update_withdrawn requires a pending update");
+      }
+      return {
+        ...installation,
+        status: "ACTIVE",
+        pendingUpdate: undefined,
+      };
     case "reauthorization_requested":
       requireStatus(installation, "UPDATE_AVAILABLE", event.type);
       if (event.decision.action !== "REAUTHORIZE") {
@@ -537,6 +562,37 @@ export function transitionInstallation(
           ? { ...installation.ens, status: "revoked" }
           : undefined,
       };
+    case "authority_retired": {
+      if (
+        installation.status !== "CONFIGURING_AUTHORITY" &&
+        installation.status !== "ACTIVE" &&
+        installation.status !== "UPDATE_AVAILABLE" &&
+        installation.status !== "AWAITING_REAUTHORIZATION" &&
+        installation.status !== "REVOKING"
+      ) {
+        throw new Error(
+          `${event.type} requires a live authority state, got ${installation.status}`,
+        );
+      }
+      if (event.retirement.privySignerCountAfter !== 0) {
+        throw new Error(
+          "authority retirement requires zero remaining delegated signers",
+        );
+      }
+      return {
+        ...installation,
+        status: "REVOKED",
+        pendingUpdate: undefined,
+        retirement: event.retirement,
+        privy: installation.privy
+          ? { ...installation.privy, status: "REVOKED" }
+          : undefined,
+        ens:
+          event.retirement.ensRevokedWritten && installation.ens
+            ? { ...installation.ens, status: "revoked" }
+            : installation.ens,
+      };
+    }
   }
 }
 
@@ -602,6 +658,22 @@ export function createRevocationRecord(input: {
     postRevokeExecutionFailed: input.postRevokeExecutionFailed,
     recordedAt: input.recordedAt,
   };
+}
+
+export function createRetirementRecord(input: {
+  readonly reason: string;
+  readonly retiredAt: string;
+  readonly privySignerCountAfter: number;
+  readonly ensRevokedWritten: boolean;
+}): RetirementRecord {
+  assertIsoTimestamp(input.retiredAt, "retirement.retiredAt");
+  nonBlank(input.reason, "retirement.reason");
+  if (input.privySignerCountAfter !== 0) {
+    throw new Error(
+      "authority retirement requires zero remaining delegated signers",
+    );
+  }
+  return { schema: "kanon.retirement-record", version: 1, ...input };
 }
 
 export * from "./api-contracts.js";

@@ -8,7 +8,7 @@ services:
     plan: free
     numInstances: 1
     buildCommand: corepack enable && corepack prepare pnpm@11.5.0 --activate && pnpm install --frozen-lockfile
-    startCommand: pnpm exec tsx apps/runner/src/server.ts
+    startCommand: node --import tsx apps/runner/src/server.ts
     healthCheckPath: /healthz
     autoDeployTrigger: commit
     envVars:
@@ -44,7 +44,7 @@ services:
     plan: free
     numInstances: 1
     buildCommand: corepack enable && corepack prepare pnpm@11.5.0 --activate && pnpm install --frozen-lockfile
-    startCommand: pnpm exec tsx apps/api/src/server.ts
+    startCommand: node --import tsx apps/api/src/server.ts
     healthCheckPath: /healthz
     autoDeployTrigger: commit
     envVars:
@@ -59,6 +59,10 @@ services:
       - key: RUNNER_SHARED_SECRET
         sync: false
       - key: KANON_COMPANY_API_TOKEN
+        sync: false
+      - key: KANON_DEMO_API_TOKEN
+        sync: false
+      - key: KANON_DEMO_LEASE_TTL_SECONDS
         sync: false
       - key: PRIVY_APP_ID
         sync: false

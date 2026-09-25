@@ -30,7 +30,7 @@ export type {
 export type PrivySdkClient = PrivyClient;
 
 const DEFAULT_ALLOWED_RECIPIENT = "0x8b88E1E1174eDC65B08de75A5439f130da8A3DFd";
-const DEFAULT_FORBIDDEN_RECIPIENT =
+export const DEFAULT_FORBIDDEN_RECIPIENT =
   "0x2222222222222222222222222222222222222222";
 const T3_EXTERNAL_ID = "kanon-t3-sepolia";
 const T3_POLICY_NAME = "Kanon T3 delegated signer policy";

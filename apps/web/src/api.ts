@@ -157,6 +157,12 @@ export interface InstallationResource {
     readonly ensStatus: "approved" | "active" | "revoked";
     readonly postRevokeExecutionFailed: boolean;
   };
+  readonly retirement?: {
+    readonly reason: string;
+    readonly retiredAt: string;
+    readonly privySignerCountAfter: number;
+    readonly ensRevokedWritten: boolean;
+  };
 }
 
 export interface UpdateDiffResource {
@@ -209,6 +215,24 @@ export interface ProofResponse {
   readonly requestId: string;
 }
 
+export interface StatusResource {
+  readonly schema: "kanon.api.status";
+  readonly version: 1;
+  readonly release: string;
+  readonly api: string;
+  readonly database: string;
+  readonly runner: string;
+  readonly demo: {
+    readonly leaseTtlSeconds: number;
+    readonly liveSession: {
+      readonly installationId: string;
+      readonly status: string;
+      readonly ageSeconds: number;
+      readonly expiresInSeconds: number;
+    } | null;
+  };
+}
+
 export interface ApiErrorPayload {
   readonly schema?: "kanon.api.error";
   readonly version?: 1;
@@ -221,12 +245,14 @@ export interface ApiErrorPayload {
 export class KanonApiError extends Error {
   public readonly code: string;
   public readonly status: number;
+  public readonly details?: Record<string, string>;
 
   public constructor(status: number, payload: ApiErrorPayload) {
     super(payload.message ?? payload.code ?? "Kanon request failed");
     this.name = "KanonApiError";
     this.code = payload.code;
     this.status = status;
+    this.details = payload.details;
   }
 }
 
@@ -258,9 +284,14 @@ export class KanonApi {
     this.baseUrl = baseUrl.replace(/\/$/, "");
   }
 
-  private async request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  private async request<T>(
+    path: string,
+    init: RequestInit = {},
+    timeoutMs = 20_000,
+  ): Promise<T> {
     const response = await fetch(`${this.baseUrl}${path}`, {
       ...init,
+      signal: init.signal ?? AbortSignal.timeout(timeoutMs),
       headers: {
         accept: "application/json",
         ...(init.body === undefined
@@ -282,6 +313,56 @@ export class KanonApi {
 
   public health(): Promise<Record<string, unknown>> {
     return this.request("/healthz");
+  }
+
+  public status(): Promise<StatusResource> {
+    return this.request("/v1/status");
+  }
+
+  public installations(
+    organizationId: string,
+    limit = 5,
+  ): Promise<readonly InstallationResource[]> {
+    return this.request(
+      `/v1/organizations/${encodeURIComponent(organizationId)}/installations?limit=${limit}`,
+    );
+  }
+
+  public execute(
+    organizationId: string,
+    installationId: string,
+    scenario: "ALLOWED" | "FORBIDDEN",
+  ): Promise<InstallationResource> {
+    return this.request(
+      `/v1/organizations/${encodeURIComponent(organizationId)}/installations/${encodeURIComponent(installationId)}/executions`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          schema: "kanon.api.execution-request",
+          version: 1,
+          installationId,
+          scenario,
+        }),
+      },
+      115_000,
+    );
+  }
+
+  public rejectUpdate(
+    organizationId: string,
+    installationId: string,
+  ): Promise<InstallationResource> {
+    return this.request(
+      `/v1/organizations/${encodeURIComponent(organizationId)}/installations/${encodeURIComponent(installationId)}/reject-update`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          schema: "kanon.api.reject-update",
+          version: 1,
+          installationId,
+        }),
+      },
+    );
   }
 
   public organization(organizationId: string): Promise<OrganizationResource> {
@@ -337,6 +418,7 @@ export class KanonApi {
     organizationId: string,
     agentId: string,
     release: Record<string, unknown>,
+    installationId?: string,
   ): Promise<AgentResource> {
     return this.request(
       `/v1/organizations/${encodeURIComponent(organizationId)}/agents/${encodeURIComponent(agentId)}/releases`,
@@ -347,6 +429,7 @@ export class KanonApi {
           version: 1,
           organizationId,
           release,
+          ...(installationId === undefined ? {} : { installationId }),
         }),
       },
     );

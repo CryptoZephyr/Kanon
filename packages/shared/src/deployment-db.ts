@@ -5,6 +5,19 @@ import type { Installation } from "./index.js";
 
 export type DeploymentProofStatus = "running" | "passed" | "failed";
 
+export const LIVE_INSTALLATION_STATUSES = Object.freeze([
+  "CONFIGURING_AUTHORITY",
+  "ACTIVE",
+  "UPDATE_AVAILABLE",
+  "AWAITING_REAUTHORIZATION",
+  "REVOKING",
+] as const);
+
+export interface InstallationRow {
+  readonly installation: Installation;
+  readonly updatedAt: Date;
+}
+
 export interface DeploymentDatabase {
   readonly pool: Pool;
   readonly migrate: () => Promise<void>;
@@ -16,8 +29,18 @@ export interface DeploymentDatabase {
     organizationId: string,
     agentId: string,
   ) => Promise<Installation | undefined>;
+  readonly listLiveInstallations: (
+    organizationId: string,
+  ) => Promise<readonly InstallationRow[]>;
+  readonly listRecentInstallations: (
+    organizationId: string,
+    limit: number,
+  ) => Promise<readonly InstallationRow[]>;
   readonly saveInstallation: (installation: Installation) => Promise<void>;
   readonly getRelease: (releaseId: string) => Promise<AgentRelease | undefined>;
+  readonly getReleaseInstallationId: (
+    releaseId: string,
+  ) => Promise<string | undefined>;
   readonly findReleaseByAgent: (
     agentId: string,
   ) => Promise<AgentRelease | undefined>;
@@ -146,6 +169,40 @@ export function createDeploymentDatabase(
         [installation.id, JSON.stringify(installation)],
       );
     },
+    listLiveInstallations: async (organizationId) => {
+      const rows = await query<{ state: Installation; updated_at: Date }>(
+        pool,
+        `
+          SELECT state, updated_at
+          FROM kanon_installations
+          WHERE state->>'organizationId' = $1
+            AND state->>'status' = ANY($2::text[])
+          ORDER BY updated_at DESC
+        `,
+        [organizationId, [...LIVE_INSTALLATION_STATUSES]],
+      );
+      return rows.map((row) => ({
+        installation: row.state,
+        updatedAt: row.updated_at,
+      }));
+    },
+    listRecentInstallations: async (organizationId, limit) => {
+      const rows = await query<{ state: Installation; updated_at: Date }>(
+        pool,
+        `
+          SELECT state, updated_at
+          FROM kanon_installations
+          WHERE state->>'organizationId' = $1
+          ORDER BY updated_at DESC
+          LIMIT $2
+        `,
+        [organizationId, Math.max(1, Math.floor(limit))],
+      );
+      return rows.map((row) => ({
+        installation: row.state,
+        updatedAt: row.updated_at,
+      }));
+    },
     getRelease: async (releaseId) => {
       const rows = await query<{ release: AgentRelease }>(
         pool,
@@ -167,6 +224,14 @@ export function createDeploymentDatabase(
         [agentId],
       );
       return rows[0]?.release;
+    },
+    getReleaseInstallationId: async (releaseId) => {
+      const rows = await query<{ installation_id: string }>(
+        pool,
+        "SELECT installation_id FROM kanon_releases WHERE release_id = $1",
+        [releaseId],
+      );
+      return rows[0]?.installation_id;
     },
     getReleaseForInstallation: async (installationId) => {
       const rows = await query<{ release: AgentRelease }>(

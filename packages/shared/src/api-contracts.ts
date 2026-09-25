@@ -31,6 +31,7 @@ import type {
   Organization,
   OrganizationId,
   PrivyControlBinding,
+  RetirementRecord,
   RevocationRecord,
   UpdateProposal,
 } from "./index.js";
@@ -99,6 +100,26 @@ export const KANON_API_ROUTES = Object.freeze({
     path: "/v1/organizations/{organizationId}/installations/{installationId}/revoke",
     auth: "company",
   },
+  installations: {
+    method: "GET",
+    path: "/v1/organizations/{organizationId}/installations",
+    auth: "company",
+  },
+  executions: {
+    method: "POST",
+    path: "/v1/organizations/{organizationId}/installations/{installationId}/executions",
+    auth: "company",
+  },
+  rejectUpdate: {
+    method: "POST",
+    path: "/v1/organizations/{organizationId}/installations/{installationId}/reject-update",
+    auth: "company",
+  },
+  status: {
+    method: "GET",
+    path: "/v1/status",
+    auth: "company",
+  },
 } as const satisfies Readonly<Record<string, KanonApiRoute>>);
 
 export const KANON_API_CONTRACT = Object.freeze({
@@ -109,6 +130,7 @@ export const KANON_API_CONTRACT = Object.freeze({
 
 export type ApiErrorCode =
   | "UNAUTHORIZED"
+  | "FORBIDDEN"
   | "INVALID_REQUEST"
   | "NOT_FOUND"
   | "CONFLICT"
@@ -116,6 +138,10 @@ export type ApiErrorCode =
   | "AUTHORITY_MISMATCH"
   | "UNSUPPORTED_POLICY_COMBINATION"
   | "REVOKED"
+  | "DEMO_SESSION_ACTIVE"
+  | "DEMO_TERMS_OUT_OF_BOUNDS"
+  | "RATE_LIMITED"
+  | "UPSTREAM_FAILED"
   | "INTERNAL_ERROR";
 
 export interface ApiSuccess<T> {
@@ -280,6 +306,7 @@ export interface InstallationResource {
   readonly updateDiff?: UpdateDiffResource;
   readonly evidence: readonly ApiEvidenceResource[];
   readonly revoke?: RevokeResource;
+  readonly retirement?: RetirementRecord;
 }
 
 export interface CreateOrganizationRequest {
@@ -302,6 +329,20 @@ export interface PublishAgentReleaseRequest {
   readonly version: ApiContractVersion;
   readonly organizationId: OrganizationId;
   readonly release: AgentRelease | AgentReleaseInput;
+  readonly installationId?: InstallationId;
+}
+
+export interface ExecutionRequestResource {
+  readonly schema: "kanon.api.execution-request";
+  readonly version: ApiContractVersion;
+  readonly installationId: InstallationId;
+  readonly scenario: "ALLOWED" | "FORBIDDEN";
+}
+
+export interface RejectUpdateRequest {
+  readonly schema: "kanon.api.reject-update";
+  readonly version: ApiContractVersion;
+  readonly installationId: InstallationId;
 }
 
 export interface DefineCompanyTermsRequest {
@@ -800,5 +841,8 @@ export function createInstallationResource(input: {
     ...(updateDiff === undefined ? {} : { updateDiff }),
     evidence: Object.freeze([...(input.evidence ?? [])]),
     ...(revoke === undefined ? {} : { revoke }),
+    ...(installation.retirement === undefined
+      ? {}
+      : { retirement: installation.retirement }),
   });
 }

@@ -1,0 +1,30 @@
+name: Keep hosted demo warm
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  warm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Warm hosted demo endpoints
+        run: |
+          if [ "$(date -u +%Y-%m-%d)" \> "2026-10-03" ]; then
+            echo "demo window has ended; skipping keep-warm pings"
+            exit 0
+          fi
+          status=0
+          curl --silent --show-error --max-time 120 --retry 3 \
+            https://kanon-agents.vercel.app/api/v1/status || status=1
+          curl --silent --show-error --max-time 120 --retry 3 \
+            https://kanon-runner.onrender.com/healthz || status=1
+          if [ "$status" -ne 0 ]; then
+            echo "::warning::one or more keep-warm pings failed"
+          fi
+          exit 0

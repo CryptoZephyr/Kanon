@@ -1,6 +1,6 @@
 {
   "name": "kanon",
-  "version": "0.0.0",
+  "version": "0.3.0",
   "private": true,
   "license": "MIT",
   "description": "Kanon business agent-control runtime and approved frontend workspace.",
@@ -23,7 +23,8 @@
     "spike:ens:t6": "node --env-file=.env.local --import=tsx apps/runner/src/ens-t6-write-probe.ts",
     "spike:ens:t7": "node --env-file=.env.local --import=tsx apps/runner/src/ens-t7-read-probe.ts",
     "spike:lifecycle:t8-t10": "node --import=tsx apps/runner/src/lifecycle-proof-probe.ts",
-    "spike:lifecycle:t11-t13": "node --env-file=.env.local --import=tsx apps/runner/src/lifecycle-t11-t13-probe.ts"
+    "spike:lifecycle:t11-t13": "node --env-file=.env.local --import=tsx apps/runner/src/lifecycle-t11-t13-probe.ts",
+    "smoke:live": "node --import=tsx apps/runner/src/live-judge-flow.ts"
   },
   "devDependencies": {
     "@eslint/js": "9.35.0",

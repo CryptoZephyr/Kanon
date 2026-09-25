@@ -241,10 +241,15 @@ async function handleRequest(
         version: 1,
         status: "ok",
         service: "runner",
+        release: "kanon-3rd-web-hack-2026.09",
         database: "ok",
       });
     } catch {
-      sendJson(response, 503, { status: "degraded", service: "runner" });
+      sendJson(response, 503, {
+        status: "degraded",
+        service: "runner",
+        release: "kanon-3rd-web-hack-2026.09",
+      });
     }
     return;
   }

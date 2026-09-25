@@ -7,6 +7,7 @@ import {
   type InstallationResource,
   type OrganizationResource,
   type ProofResponse,
+  type StatusResource,
   type WalletResource,
 } from "./api.js";
 
@@ -22,6 +23,7 @@ type Screen =
 const ORGANIZATION_ID = "organization-kanon";
 const REPRESENTATIVE_AGENT_ID = "com.example.treasury";
 const INSTALLATION_ID = "installation-t11-live";
+const SESSION_STORAGE_KEY = "kanon.session.installationId";
 const DEFAULT_RECIPIENT = "0x8b88e1e1174edc65b08de75a5439f130da8a3dfd";
 const DEFAULT_TERMS: CompanyRule[] = [
   {
@@ -37,7 +39,7 @@ const FALLBACK_AGENT: AgentResource = {
   schema: "kanon.api.agent-capability",
   version: 1,
   agentId: REPRESENTATIVE_AGENT_ID,
-  releaseId: "release-t12-expanded-ethonline-2026",
+  releaseId: "release-b-3rd-web-hack-2026",
   releaseVersion: "2.0.0",
   packageHash:
     "sha256:8c434023dbc035910b8d3a052b558eb4bc347dbead8087072c54227ee4bba34d",
@@ -47,7 +49,7 @@ const FALLBACK_AGENT: AgentResource = {
     schema: "kanon.agent",
     agent: {
       id: REPRESENTATIVE_AGENT_ID,
-      releaseId: "release-t12-expanded-ethonline-2026",
+      releaseId: "release-b-3rd-web-hack-2026",
       version: "2.0.0",
     },
     runtime: { entry: "worker" },
@@ -86,7 +88,13 @@ interface Workspace {
   readonly proof?: ProofResponse;
   readonly connected: boolean;
   readonly source: "api" | "proof" | "fixture";
+  readonly installationSource: "session" | "observe" | "none";
 }
+
+type ConnectionState = {
+  readonly state: "connecting" | "connected" | "unavailable";
+  readonly attempts: number;
+};
 
 interface DraftRelease {
   readonly agentId: string;
@@ -115,6 +123,24 @@ function decisionId(prefix: string): string {
   return `${prefix}-${suffix}`;
 }
 
+function generateReleaseId(): string {
+  const day = new Date().toISOString().slice(0, 10).replaceAll("-", "");
+  const random = Math.random().toString(36).slice(2, 8);
+  return `release-3wh-${day}-${random}`;
+}
+
+function nextReleaseId(releaseId: string): string {
+  const match = releaseId.match(/-v(\d+)$/);
+  if (match) {
+    return `${releaseId.slice(0, -match[0].length)}-v${Number(match[1]) + 1}`;
+  }
+  return `${releaseId}-v2`;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function formatStatus(status: string | undefined): string {
   return status ? status.toLowerCase().replaceAll("_", " ") : "not connected";
 }
@@ -125,7 +151,22 @@ function getErrorMessage(error: unknown): string {
       return "This resource is not available in the deployed API yet.";
     if (error.code === "UNAUTHORIZED")
       return "The company session is not authorized for this action.";
+    if (error.code === "DEMO_SESSION_ACTIVE") {
+      const retrySeconds = Number(error.details?.retryAfterSeconds ?? "60");
+      const minutes = Math.max(1, Math.ceil(retrySeconds / 60));
+      return `Another demo session is live on the shared fixture. Try again in about ${minutes} minute${minutes === 1 ? "" : "s"}.`;
+    }
+    if (error.code === "RATE_LIMITED")
+      return "The hosted demo is rate limited right now. Try again shortly.";
+    if (error.code === "UPSTREAM_FAILED")
+      return "The execution runner could not be reached. Try again shortly.";
     return error.message;
+  }
+  if (
+    error instanceof DOMException &&
+    (error.name === "TimeoutError" || error.name === "AbortError")
+  ) {
+    return "The request timed out. The hosted backend may still be waking up.";
   }
   return error instanceof Error
     ? error.message
@@ -170,6 +211,134 @@ function MetaLabel({ children }: { readonly children: React.ReactNode }) {
   return <span className="meta-label">{children}</span>;
 }
 
+function judgeSteps(installation?: InstallationResource): {
+  readonly label: string;
+  readonly done: boolean;
+}[] {
+  const evidence = installation?.evidence ?? [];
+  const revocationIndex = evidence.findIndex(
+    (entry) => entry.schema === "kanon.api.revocation-evidence",
+  );
+  const executions = evidence
+    .filter((entry) => entry.schema === "kanon.api.execution-evidence")
+    .map((entry) => entry.evidence);
+  const executionsBeforeRevoke =
+    revocationIndex < 0
+      ? executions
+      : evidence
+          .slice(0, revocationIndex)
+          .filter((entry) => entry.schema === "kanon.api.execution-evidence")
+          .map((entry) => entry.evidence);
+  const executionsAfterRevoke =
+    revocationIndex < 0
+      ? []
+      : evidence
+          .slice(revocationIndex + 1)
+          .filter((entry) => entry.schema === "kanon.api.execution-evidence")
+          .map((entry) => entry.evidence);
+  const status = installation?.status;
+  const generation = installation?.generation ?? 0;
+  const expandedDetected =
+    installation?.updateDiff?.proposal.classification === "EXPANDED" ||
+    (status === "ACTIVE" && generation >= 1) ||
+    (status === "REVOKED" && generation >= 2);
+  const reauthorized =
+    (status === "ACTIVE" && generation >= 1) ||
+    (status === "REVOKED" && generation >= 2);
+  const reachedRevocation = status === "REVOKED" || status === "REVOKING";
+  return [
+    { label: "Register release", done: installation !== undefined },
+    {
+      label: "Review requested capabilities",
+      done: installation !== undefined,
+    },
+    { label: "Define company authority", done: installation !== undefined },
+    {
+      label: "Approve exact boundary",
+      done: installation?.approval !== undefined,
+    },
+    {
+      label: "Privy authority active",
+      done: installation?.activeAuthority !== undefined || reachedRevocation,
+    },
+    {
+      label: "Inspect ENS identity + permissionHash",
+      done:
+        installation?.activeAuthority?.ens.verified === true ||
+        reachedRevocation,
+    },
+    {
+      label: "Allowed action succeeded",
+      done: executions.some((entry) => entry.outcome === "SUCCEEDED"),
+    },
+    {
+      label: "Forbidden action rejected",
+      done: executionsBeforeRevoke.some(
+        (entry) => entry.outcome === "REJECTED",
+      ),
+    },
+    { label: "Broader release detected (EXPANDED)", done: expandedDetected },
+    {
+      label: "Fresh human reauthorization (generation +1)",
+      done: reauthorized,
+    },
+    { label: "Authority revoked", done: status === "REVOKED" },
+    {
+      label: "Post-revoke execution failed",
+      done:
+        installation?.revoke?.postRevokeExecutionFailed === true ||
+        executionsAfterRevoke.some((entry) => entry.outcome === "REJECTED"),
+    },
+  ];
+}
+
+function JudgeRail({
+  installation,
+}: {
+  readonly installation?: InstallationResource;
+}) {
+  const steps = judgeSteps(installation);
+  return (
+    <div className="judge-rail">
+      <MetaLabel>Judge path</MetaLabel>
+      <ol className="judge-steps">
+        {steps.map((step, index) => (
+          <li
+            key={step.label}
+            className={step.done ? "judge-step is-done" : "judge-step"}
+          >
+            <span className="judge-step-index">
+              {String(index + 1).padStart(2, "0")}
+            </span>
+            <span>{step.label}</span>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+function CopyButton({ value }: { readonly value: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      className="text-link"
+      type="button"
+      onClick={() => {
+        void navigator.clipboard
+          ?.writeText(value)
+          .then(() => {
+            setCopied(true);
+            window.setTimeout(() => setCopied(false), 1_500);
+          })
+          .catch(() => undefined);
+      }}
+    >
+      {copied ? "Copied" : "Copy"}
+    </button>
+  );
+}
+
 function Rule({ children }: { readonly children?: React.ReactNode }) {
   return <div className="rule-row">{children}</div>;
 }
@@ -193,7 +362,7 @@ function LandingPage({ onEnter }: { readonly onEnter: () => void }) {
         aria-labelledby="landing-title"
       >
         <div className="hero-edge hero-edge-top">
-          COMPANY AUTHORITY / SEPOLIA PROOF
+          3RD-WEB-HACK RELEASE / SEPOLIA TESTNET
         </div>
         <div className="hero-copy">
           <MetaLabel>Financial control for deployed agents</MetaLabel>
@@ -292,7 +461,9 @@ function LandingPage({ onEnter }: { readonly onEnter: () => void }) {
         <span>
           Kanon gives companies a visible control boundary for financial agents.
         </span>
-        <span className="mono">ETHEREUM SEPOLIA / 11155111</span>
+        <span className="mono">
+          3RD-WEB-HACK RELEASE / SEPOLIA TESTNET / 11155111
+        </span>
       </footer>
     </main>
   );
@@ -301,16 +472,28 @@ function LandingPage({ onEnter }: { readonly onEnter: () => void }) {
 function AppShell({
   screen,
   workspace,
+  connection,
+  statusInfo,
+  announce,
+  onRetry,
   onNavigate,
   onHome,
   children,
 }: {
   readonly screen: Screen;
   readonly workspace: Workspace;
+  readonly connection: ConnectionState;
+  readonly statusInfo?: StatusResource;
+  readonly announce: string;
+  readonly onRetry: () => void;
   readonly onNavigate: (screen: Screen) => void;
   readonly onHome: () => void;
   readonly children: React.ReactNode;
 }) {
+  const liveSession = statusInfo?.demo.liveSession ?? null;
+  const sessionIsOurs =
+    liveSession !== null &&
+    liveSession.installationId === workspace.installation?.id;
   return (
     <div className="app-shell">
       <header className="app-header page-grid">
@@ -339,11 +522,30 @@ function AppShell({
         <div className="app-status">
           <span
             className={
-              workspace.connected ? "status-mark is-live" : "status-mark"
+              connection.state === "connected"
+                ? "status-mark is-live"
+                : "status-mark"
             }
           />
-          {workspace.connected ? "API connected" : "API pending"}
-          <span className="mono">SEPOLIA</span>
+          <span role="status" aria-live="polite">
+            {connection.state === "connected"
+              ? "API connected"
+              : connection.state === "unavailable"
+                ? "API unavailable"
+                : `Waking hosted backend… attempt ${connection.attempts}`}
+          </span>
+          {connection.state === "connecting" && (
+            <span className="status-note">
+              free-tier services sleep when idle — the first request can take up
+              to a minute
+            </span>
+          )}
+          {connection.state === "unavailable" && (
+            <button className="text-link" onClick={onRetry}>
+              Retry
+            </button>
+          )}
+          <span className="mono">3RD-WEB-HACK / SEPOLIA TESTNET</span>
         </div>
       </header>
       <div className="workspace-ribbon page-grid">
@@ -355,6 +557,30 @@ function AppShell({
           {displayAddress(workspace.wallet.address)} / CHAIN{" "}
           {workspace.wallet.chainId}
         </span>
+      </div>
+      {connection.state === "connected" && (
+        <div className="session-banner page-grid" aria-live="polite">
+          {liveSession === null ? (
+            <span>Fixture free — you can start a run</span>
+          ) : sessionIsOurs ? (
+            <span>
+              Your session is live — it expires in{" "}
+              {Math.max(1, Math.ceil(liveSession.expiresInSeconds / 60))} min
+            </span>
+          ) : (
+            <span>
+              Another session is live — it expires in{" "}
+              {Math.max(1, Math.ceil(liveSession.expiresInSeconds / 60))} min
+            </span>
+          )}
+          {workspace.installationSource === "observe" &&
+            workspace.installation && (
+              <span className="mono">LATEST RUN (OBSERVE)</span>
+            )}
+        </div>
+      )}
+      <div className="visually-hidden" role="status" aria-live="polite">
+        {announce}
       </div>
       <main className="app-main page-grid">{children}</main>
     </div>
@@ -413,7 +639,13 @@ function Registry({
               <span className="mono">{agent.releaseId}</span>
             </span>
             <span>
-              <strong>{formatStatus(status)}</strong>
+              <strong>
+                {formatStatus(status)}
+                {workspace.installationSource === "observe" &&
+                workspace.installation
+                  ? " · observing"
+                  : ""}
+              </strong>
               <span className="mono">
                 {displayHash(
                   workspace.installation?.companyTerms.permissionHash,
@@ -459,6 +691,7 @@ function Registry({
             The registry shows the boundary before the detail view shows the
             proof.
           </div>
+          <JudgeRail installation={workspace.installation} />
         </aside>
       </div>
       <div className="screen-footnote">
@@ -467,7 +700,10 @@ function Registry({
             ? "NORMAL RESOLUTION AVAILABLE"
             : "CONNECTING TO API"}
         </span>
-        <span>Technical identifiers stay secondary to the decision state.</span>
+        <span>
+          Sepolia testnet demo — technical identifiers stay secondary to the
+          decision state.
+        </span>
       </div>
     </div>
   );
@@ -485,7 +721,7 @@ function AddAgent({
   readonly error?: string;
 }) {
   const [agentId, setAgentId] = useState(REPRESENTATIVE_AGENT_ID);
-  const [releaseId, setReleaseId] = useState("release-web-1");
+  const [releaseId, setReleaseId] = useState(generateReleaseId);
   const [version, setVersion] = useState("1.0.0");
   const [packageContent, setPackageContent] = useState("kanon-agent-release");
   const [entry, setEntry] = useState("worker");
@@ -581,6 +817,7 @@ function AddAgent({
 
 function Authority({
   agent,
+  controlWallet,
   initialTerms,
   onSubmit,
   onBack,
@@ -588,15 +825,14 @@ function Authority({
   error,
 }: {
   readonly agent: AgentResource;
+  readonly controlWallet: string;
   readonly initialTerms: CompanyRule[];
   readonly onSubmit: (terms: CompanyRule[]) => void;
   readonly onBack: () => void;
   readonly loading: boolean;
   readonly error?: string;
 }) {
-  const [recipient, setRecipient] = useState(
-    initialTerms[0]?.recipient ?? DEFAULT_RECIPIENT,
-  );
+  const recipient = initialTerms[0]?.recipient ?? controlWallet;
   const [maxValueWei, setMaxValueWei] = useState(
     initialTerms[0]?.maxValueWei ?? "1",
   );
@@ -665,13 +901,11 @@ function Authority({
               <option value="11155111">Ethereum Sepolia / 11155111</option>
             </select>
           </Field>
-          <Field label="Recipient" hint="Exact EVM recipient">
-            <input
-              value={recipient}
-              onChange={(event) => setRecipient(event.target.value)}
-              required
-              pattern="0x[0-9a-fA-F]{40}"
-            />
+          <Field
+            label="Recipient"
+            hint="Hosted demo funds can only move to the organization control wallet"
+          >
+            <input value={recipient} readOnly aria-readonly="true" />
           </Field>
           <div className="field-grid">
             <Field label="Per-action ceiling" hint="Wei">
@@ -706,6 +940,14 @@ function Authority({
               path. The signed transaction is broadcast separately.
             </span>
           </div>
+          <div className="authority-note">
+            <span className="note-mark">!</span>
+            <span>
+              Hosted demo ceiling: the recipient is fixed to the organization
+              control wallet, ceilings are capped at 1000 wei, and a rolling
+              window is required.
+            </span>
+          </div>
           {error && <InlineError message={error} />}
           <div className="form-actions">
             <Button kind="secondary" onClick={onBack}>
@@ -727,6 +969,7 @@ function ApprovalReview({
   permissionHash,
   action,
   onApprove,
+  onRejectUpdate,
   onBack,
   loading,
   error,
@@ -736,6 +979,7 @@ function ApprovalReview({
   readonly permissionHash?: string;
   readonly action: "APPROVE" | "REAUTHORIZE";
   readonly onApprove: () => void;
+  readonly onRejectUpdate?: () => void;
   readonly onBack: () => void;
   readonly loading: boolean;
   readonly error?: string;
@@ -844,6 +1088,11 @@ function ApprovalReview({
         <Button kind="secondary" onClick={onBack}>
           Keep editing
         </Button>
+        {action === "REAUTHORIZE" && onRejectUpdate && (
+          <Button kind="secondary" onClick={onRejectUpdate} disabled={loading}>
+            Reject update (keep current authority)
+          </Button>
+        )}
         <Button onClick={onApprove} disabled={loading}>
           {loading
             ? "Recording decision..."
@@ -858,6 +1107,8 @@ function ApprovalReview({
 
 function AgentDetail({
   workspace,
+  executing,
+  onExecute,
   onUpdate,
   onRevoke,
   onBack,
@@ -865,6 +1116,8 @@ function AgentDetail({
   error,
 }: {
   readonly workspace: Workspace;
+  readonly executing?: "ALLOWED" | "FORBIDDEN";
+  readonly onExecute: (scenario: "ALLOWED" | "FORBIDDEN") => void;
   readonly onUpdate: () => void;
   readonly onRevoke: () => void;
   readonly onBack: () => void;
@@ -875,6 +1128,20 @@ function AgentDetail({
   const agent = installation?.agent ?? workspace.agent;
   const terms = installation?.companyTerms.companyTerms.authority.rules[0];
   const status = installation?.status ?? "VALIDATED";
+  const ens = installation?.activeAuthority?.ens;
+  const executions = (installation?.evidence ?? [])
+    .filter((entry) => entry.schema === "kanon.api.execution-evidence")
+    .map(
+      (entry) =>
+        entry.evidence as {
+          readonly outcome?: string;
+          readonly transactionHash?: string;
+          readonly rejectionCode?: string;
+          readonly generation?: number;
+        },
+    );
+  const revoke = installation?.revoke;
+  const retirement = installation?.retirement;
   return (
     <div className="screen detail-screen" data-reveal>
       <ScreenBack label="Back to agents" onClick={onBack} />
@@ -893,10 +1160,7 @@ function AgentDetail({
           <div className="detail-identity">
             <div>
               <MetaLabel>ENS identity</MetaLabel>
-              <strong>
-                {installation?.activeAuthority?.ens.binding.agentName ??
-                  "Identity pending"}
-              </strong>
+              <strong>{ens?.binding.agentName ?? "Identity pending"}</strong>
             </div>
             <div>
               <MetaLabel>Current release</MetaLabel>
@@ -936,8 +1200,130 @@ function AgentDetail({
               </strong>
             </Rule>
           </div>
+          {ens && (
+            <div className="authority-summary">
+              <div className="panel-caption">
+                <span>ENS identity records</span>
+                <span className="mono">
+                  {ens.verified ? "VERIFIED" : "UNVERIFIED"}
+                </span>
+              </div>
+              <Rule>
+                <span>Agent name</span>
+                <strong className="mono">{ens.binding.agentName}</strong>
+              </Rule>
+              <Rule>
+                <span>Resolver</span>
+                <a
+                  className="mono"
+                  href={`https://sepolia.etherscan.io/address/${ens.resolver}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {displayAddress(ens.resolver)}
+                </a>
+              </Rule>
+              <Rule>
+                <span>kanon.agentId</span>
+                <strong className="mono">
+                  {ens.records["kanon.agentId"] ?? "—"}
+                </strong>
+              </Rule>
+              <Rule>
+                <span>kanon.release</span>
+                <strong className="mono">
+                  {ens.records["kanon.release"] ?? "—"}
+                </strong>
+              </Rule>
+              <Rule>
+                <span>kanon.permissionHash</span>
+                <strong className="mono hash-full">
+                  {ens.records["kanon.permissionHash"] ?? "—"}
+                </strong>
+                {ens.records["kanon.permissionHash"] && (
+                  <CopyButton value={ens.records["kanon.permissionHash"]} />
+                )}
+              </Rule>
+              <Rule>
+                <span>kanon.status</span>
+                <strong className="mono">
+                  {ens.records["kanon.status"] ?? "—"}
+                </strong>
+              </Rule>
+            </div>
+          )}
+          {revoke && (
+            <div className="authority-summary">
+              <div className="panel-caption">
+                <span>Revocation evidence</span>
+                <span className="mono">{revoke.status}</span>
+              </div>
+              <Rule>
+                <span>Privy authority revoked</span>
+                <strong>
+                  {revoke.privyAuthorityRevoked ? "Yes" : "Pending"}
+                </strong>
+              </Rule>
+              <Rule>
+                <span>ENS status</span>
+                <strong className="mono">{revoke.ensStatus}</strong>
+              </Rule>
+              <Rule>
+                <span>Post-revoke execution failed</span>
+                <strong>
+                  {revoke.postRevokeExecutionFailed ? "Yes" : "Not yet proven"}
+                </strong>
+              </Rule>
+            </div>
+          )}
+          {!revoke && retirement && (
+            <div className="authority-summary">
+              <div className="panel-caption">
+                <span>Authority retired</span>
+                <span className="mono">{status}</span>
+              </div>
+              <Rule>
+                <span>Reason</span>
+                <strong>Retired by session expiry</strong>
+              </Rule>
+              <Rule>
+                <span>Delegated signers remaining</span>
+                <strong className="mono">
+                  {retirement.privySignerCountAfter}
+                </strong>
+              </Rule>
+              <Rule>
+                <span>ENS revoked status written</span>
+                <strong>
+                  {retirement.ensRevokedWritten ? "Yes" : "Not required"}
+                </strong>
+              </Rule>
+            </div>
+          )}
           <div className="detail-actions">
+            {status === "ACTIVE" && (
+              <>
+                <Button
+                  onClick={() => onExecute("ALLOWED")}
+                  disabled={!installation || executing !== undefined || loading}
+                >
+                  {executing === "ALLOWED"
+                    ? "Waiting for Sepolia confirmation…"
+                    : "Run allowed action"}
+                </Button>
+                <Button
+                  kind="secondary"
+                  onClick={() => onExecute("FORBIDDEN")}
+                  disabled={!installation || executing !== undefined || loading}
+                >
+                  {executing === "FORBIDDEN"
+                    ? "Waiting for Sepolia confirmation…"
+                    : "Try forbidden action"}
+                </Button>
+              </>
+            )}
             <Button
+              kind="secondary"
               onClick={onUpdate}
               disabled={!installation || status !== "ACTIVE"}
             >
@@ -950,7 +1336,50 @@ function AgentDetail({
             >
               {loading ? "Revoking..." : "Revoke authority"}
             </Button>
+            {status === "REVOKED" && (
+              <Button
+                onClick={() => onExecute("ALLOWED")}
+                disabled={!installation || executing !== undefined || loading}
+              >
+                {executing === "ALLOWED"
+                  ? "Waiting for Sepolia confirmation…"
+                  : "Attempt allowed action after revoke"}
+              </Button>
+            )}
           </div>
+          {executions.length > 0 && (
+            <div className="authority-summary">
+              <div className="panel-caption">
+                <span>Execution evidence</span>
+                <span className="mono">{executions.length} RECORDED</span>
+              </div>
+              {executions.map((entry, index) => (
+                <Rule key={index}>
+                  <span>
+                    {entry.outcome === "SUCCEEDED"
+                      ? "Allowed action"
+                      : "Rejected action"}
+                    {entry.generation !== undefined
+                      ? ` / generation ${entry.generation}`
+                      : ""}
+                  </span>
+                  <strong className="mono">
+                    {entry.transactionHash ? (
+                      <a
+                        href={`https://sepolia.etherscan.io/tx/${entry.transactionHash}`}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {displayHash(entry.transactionHash)}
+                      </a>
+                    ) : (
+                      (entry.rejectionCode ?? "REJECTED")
+                    )}
+                  </strong>
+                </Rule>
+              ))}
+            </div>
+          )}
           {error && <InlineError message={error} />}
         </section>
         <aside className="detail-rail">
@@ -969,11 +1398,16 @@ function AgentDetail({
             </strong>
           </div>
           <div className="evidence-item">
+            <span>Privy status</span>
+            <strong className="mono">
+              {installation?.activeAuthority?.privy.status ??
+                (status === "REVOKED" ? "REVOKED" : "Pending")}
+            </strong>
+          </div>
+          <div className="evidence-item">
             <span>ENS resolver</span>
             <strong className="mono">
-              {displayAddress(
-                installation?.activeAuthority?.ens.resolver ?? "",
-              )}
+              {displayAddress(ens?.resolver ?? "")}
             </strong>
           </div>
           <div className="evidence-item">
@@ -986,6 +1420,7 @@ function AgentDetail({
             Evidence is secondary to the decision. It remains available for the
             company record.
           </div>
+          <JudgeRail installation={installation} />
         </aside>
       </div>
     </div>
@@ -997,6 +1432,7 @@ function UpdateReview({
   currentTerms,
   diff,
   onRequest,
+  onRejectUpdate,
   onBack,
   loading,
   error,
@@ -1005,6 +1441,7 @@ function UpdateReview({
   readonly currentTerms: CompanyRule[];
   readonly diff?: InstallationResource["updateDiff"];
   readonly onRequest: (draft: DraftRelease, terms: CompanyRule[]) => void;
+  readonly onRejectUpdate: () => void;
   readonly onBack: () => void;
   readonly loading: boolean;
   readonly error?: string;
@@ -1012,7 +1449,7 @@ function UpdateReview({
   const [version, setVersion] = useState(
     `${Number.parseFloat(agent.releaseVersion) + 1 || "2.0.0"}`,
   );
-  const [releaseId, setReleaseId] = useState(`${agent.releaseId}-next`);
+  const [releaseId, setReleaseId] = useState(nextReleaseId(agent.releaseId));
   const [maxValueWei, setMaxValueWei] = useState("2");
   const [packageContent, setPackageContent] = useState(
     "kanon-agent-expanded-release",
@@ -1043,6 +1480,26 @@ function UpdateReview({
           {diff?.diff.classification ?? "DRAFT CHANGE"}
         </span>
       </div>
+      {diff && (
+        <div className="update-classification">
+          <Rule>
+            <span>Classification</span>
+            <strong className="mono">{diff.proposal.classification}</strong>
+          </Rule>
+          <Rule>
+            <span>Requires human review</span>
+            <strong>{diff.proposal.requiresHumanReview ? "Yes" : "No"}</strong>
+          </Rule>
+          {diff.diff.changedPaths.length > 0 && (
+            <Rule>
+              <span>Changed paths</span>
+              <strong className="mono">
+                {diff.diff.changedPaths.join(", ")}
+              </strong>
+            </Rule>
+          )}
+        </div>
+      )}
       <div className="redline-sheet">
         <div className="redline-head">
           <span>Authority field</span>
@@ -1134,24 +1591,37 @@ function UpdateReview({
               </p>
             </div>
           </div>
-          <Button
-            onClick={() =>
-              onRequest(
-                {
-                  agentId: agent.agentId,
-                  releaseId,
-                  version,
-                  packageContent,
-                  runtime: { entry: agent.manifest.runtime.entry },
-                  capabilities: agent.manifest.capabilities,
-                },
-                nextTerms,
-              )
-            }
-            disabled={loading}
-          >
-            {loading ? "Preparing review..." : "Prepare reauthorization"}
-          </Button>
+          {!diff && (
+            <Button
+              onClick={() =>
+                onRequest(
+                  {
+                    agentId: agent.agentId,
+                    releaseId,
+                    version,
+                    packageContent,
+                    runtime: { entry: agent.manifest.runtime.entry },
+                    capabilities: agent.manifest.capabilities,
+                  },
+                  nextTerms,
+                )
+              }
+              disabled={loading}
+            >
+              {loading ? "Preparing review..." : "Prepare reauthorization"}
+            </Button>
+          )}
+          {diff && (
+            <Button
+              kind="secondary"
+              onClick={onRejectUpdate}
+              disabled={loading}
+            >
+              {loading
+                ? "Withdrawing..."
+                : "Reject update (keep current authority)"}
+            </Button>
+          )}
           <Button kind="secondary" onClick={onBack}>
             Keep current authority
           </Button>
@@ -1246,7 +1716,15 @@ export default function App() {
     agent: FALLBACK_AGENT,
     connected: false,
     source: "fixture",
+    installationSource: "none",
   });
+  const [connection, setConnection] = useState<ConnectionState>({
+    state: "connecting",
+    attempts: 0,
+  });
+  const [statusInfo, setStatusInfo] = useState<StatusResource>();
+  const [announce, setAnnounce] = useState("");
+  const [executing, setExecuting] = useState<"ALLOWED" | "FORBIDDEN">();
   const [draftRelease, setDraftRelease] = useState<DraftRelease>();
   const [draftAgent, setDraftAgent] = useState<AgentResource>(FALLBACK_AGENT);
   const [terms, setTerms] = useState<CompanyRule[]>(DEFAULT_TERMS);
@@ -1254,54 +1732,97 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>();
 
-  const refreshWorkspace = useCallback(async () => {
-    setLoading(true);
-    setError(undefined);
-    try {
-      const [health, proof] = await Promise.all([
-        api.health(),
-        api.proofLatest().catch(() => undefined),
-      ]);
-      const [organization, wallet] = await Promise.all([
-        api.organization(ORGANIZATION_ID).catch(() => FALLBACK_ORGANIZATION),
-        api.wallet(ORGANIZATION_ID).catch(() => FALLBACK_WALLET),
-      ]);
-      const installation = await api
+  const loadWorkspace = useCallback(async () => {
+    const [organization, wallet, proof] = await Promise.all([
+      api.organization(ORGANIZATION_ID).catch(() => FALLBACK_ORGANIZATION),
+      api.wallet(ORGANIZATION_ID).catch(() => FALLBACK_WALLET),
+      api.proofLatest().catch(() => undefined),
+    ]);
+    let installation: InstallationResource | undefined;
+    let installationSource: Workspace["installationSource"] = "none";
+    const stored = window.localStorage.getItem(SESSION_STORAGE_KEY);
+    if (stored) {
+      installation = await api
+        .installation(ORGANIZATION_ID, stored)
+        .catch(() => undefined);
+      if (installation) installationSource = "session";
+    }
+    if (!installation) {
+      const list = await api
+        .installations(ORGANIZATION_ID, 5)
+        .catch(() => undefined);
+      const latest = list?.[0];
+      if (latest) {
+        installation =
+          (await api
+            .installation(ORGANIZATION_ID, latest.id)
+            .catch(() => undefined)) ?? latest;
+        installationSource = "observe";
+      }
+    }
+    if (!installation) {
+      installation = await api
         .installation(ORGANIZATION_ID, INSTALLATION_ID)
         .catch(() => undefined);
-      const agent =
-        installation?.agent ??
-        (await api
-          .agent(ORGANIZATION_ID, REPRESENTATIVE_AGENT_ID)
-          .catch(() => FALLBACK_AGENT));
-      setWorkspace({
-        organization,
-        wallet,
-        agent,
-        installation,
-        proof,
-        connected: health.status === "ok",
-        source: installation ? "api" : proof ? "proof" : "fixture",
-      });
-      if (installation?.companyTerms.companyTerms.authority.rules.length) {
-        setTerms([...installation.companyTerms.companyTerms.authority.rules]);
-        setPermissionHash(installation.companyTerms.permissionHash);
-      }
-    } catch (caught) {
-      setWorkspace((current) => ({
-        ...current,
-        connected: false,
-        source: "fixture",
-      }));
-      setError(getErrorMessage(caught));
-    } finally {
-      setLoading(false);
+      if (installation) installationSource = "observe";
+    }
+    const agent =
+      installation?.agent ??
+      (await api
+        .agent(ORGANIZATION_ID, REPRESENTATIVE_AGENT_ID)
+        .catch(() => FALLBACK_AGENT));
+    setWorkspace({
+      organization,
+      wallet,
+      agent,
+      installation,
+      proof,
+      connected: true,
+      source: installation ? "api" : proof ? "proof" : "fixture",
+      installationSource,
+    });
+    if (installation?.companyTerms.companyTerms.authority.rules.length) {
+      setTerms([...installation.companyTerms.companyTerms.authority.rules]);
+      setPermissionHash(installation.companyTerms.permissionHash);
     }
   }, [api]);
 
+  const connect = useCallback(async () => {
+    const deadline = Date.now() + 240_000;
+    let attempt = 0;
+    while (Date.now() < deadline) {
+      attempt += 1;
+      setConnection({ state: "connecting", attempts: attempt });
+      try {
+        const info = await api.status();
+        setStatusInfo(info);
+        setConnection({ state: "connected", attempts: attempt });
+        await loadWorkspace();
+        return;
+      } catch {
+        await sleep(attempt <= 1 ? 3_000 : attempt === 2 ? 5_000 : 8_000);
+      }
+    }
+    setConnection((current) => ({
+      state: "unavailable",
+      attempts: current.attempts,
+    }));
+  }, [api, loadWorkspace]);
+
   useEffect(() => {
-    void refreshWorkspace();
-  }, [refreshWorkspace]);
+    void connect();
+  }, [connect]);
+
+  useEffect(() => {
+    if (connection.state !== "connected") return;
+    const interval = window.setInterval(() => {
+      api
+        .status()
+        .then(setStatusInfo)
+        .catch(() => undefined);
+    }, 60_000);
+    return () => window.clearInterval(interval);
+  }, [connection.state, api]);
 
   const handlePublish = async (draft: DraftRelease) => {
     setLoading(true);
@@ -1312,6 +1833,7 @@ export default function App() {
         ORGANIZATION_ID,
         draft.agentId,
         draft as unknown as Record<string, unknown>,
+        `installation-${draft.releaseId}`,
       );
       setDraftAgent(agent);
       setScreen("authority");
@@ -1335,11 +1857,13 @@ export default function App() {
         installationId,
         { rules: nextTerms },
       );
+      window.localStorage.setItem(SESSION_STORAGE_KEY, installation.id);
       setWorkspace((current) => ({
         ...current,
         agent: installation.agent,
         installation,
         source: "api",
+        installationSource: "session",
       }));
       setPermissionHash(installation.companyTerms.permissionHash);
       setScreen("review");
@@ -1400,6 +1924,7 @@ export default function App() {
         agent: next.agent,
         installation: next,
         source: "api",
+        installationSource: "session",
       }));
       if (next.companyTerms.permissionHash)
         setPermissionHash(next.companyTerms.permissionHash);
@@ -1417,6 +1942,56 @@ export default function App() {
     }
   };
 
+  const handleExecute = async (scenario: "ALLOWED" | "FORBIDDEN") => {
+    const installation = workspace.installation;
+    if (!installation) return;
+    setExecuting(scenario);
+    setError(undefined);
+    setAnnounce("Waiting for Sepolia confirmation…");
+    try {
+      const next = await api.execute(
+        ORGANIZATION_ID,
+        installation.id,
+        scenario,
+      );
+      setWorkspace((current) => ({
+        ...current,
+        installation: next,
+        source: "api",
+      }));
+      const latest = next.evidence.at(-1)?.evidence;
+      const outcome = String(latest?.outcome ?? "recorded").toLowerCase();
+      setAnnounce(
+        `Execution ${outcome}${latest?.rejectionCode ? `: ${String(latest.rejectionCode)}` : ""}`,
+      );
+    } catch (caught) {
+      setError(getErrorMessage(caught));
+      setAnnounce("Execution request failed");
+    } finally {
+      setExecuting(undefined);
+    }
+  };
+
+  const handleRejectUpdate = async () => {
+    const installation = workspace.installation;
+    if (!installation) return;
+    setLoading(true);
+    setError(undefined);
+    try {
+      const next = await api.rejectUpdate(ORGANIZATION_ID, installation.id);
+      setWorkspace((current) => ({
+        ...current,
+        installation: next,
+        source: "api",
+      }));
+      setScreen("detail");
+    } catch (caught) {
+      setError(getErrorMessage(caught));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handlePrepareUpdate = async (
     draft: DraftRelease,
     nextTerms: CompanyRule[],
@@ -1426,13 +2001,14 @@ export default function App() {
     setDraftRelease(draft);
     setTerms(nextTerms);
     try {
+      const installation = workspace.installation;
       const agent = await api.publishRelease(
         ORGANIZATION_ID,
         draft.agentId,
         draft as unknown as Record<string, unknown>,
+        installation?.id,
       );
       setDraftAgent(agent);
-      const installation = workspace.installation;
       if (installation) {
         const updated = await api.defineTerms(
           ORGANIZATION_ID,
@@ -1509,6 +2085,10 @@ export default function App() {
     <AppShell
       screen={screen}
       workspace={workspace}
+      connection={connection}
+      statusInfo={statusInfo}
+      announce={announce}
+      onRetry={() => void connect()}
       onNavigate={(next) => {
         setError(undefined);
         setScreen(next);
@@ -1539,6 +2119,7 @@ export default function App() {
       {screen === "authority" && (
         <Authority
           agent={draftAgent}
+          controlWallet={workspace.organization.controlWallet}
           initialTerms={terms}
           onSubmit={handleTerms}
           onBack={() => setScreen("add")}
@@ -1557,6 +2138,9 @@ export default function App() {
               reauthorizationPending ? "REAUTHORIZE" : "APPROVE",
             )
           }
+          onRejectUpdate={
+            reauthorizationPending ? () => void handleRejectUpdate() : undefined
+          }
           onBack={() =>
             setScreen(
               workspace.installation?.status === "UPDATE_AVAILABLE"
@@ -1571,6 +2155,8 @@ export default function App() {
       {screen === "detail" && (
         <AgentDetail
           workspace={workspace}
+          executing={executing}
+          onExecute={(scenario) => void handleExecute(scenario)}
           onUpdate={() => setScreen("update")}
           onRevoke={() => void handleRevoke()}
           onBack={() => setScreen("agents")}
@@ -1584,6 +2170,7 @@ export default function App() {
           currentTerms={terms}
           diff={installation?.updateDiff}
           onRequest={handlePrepareUpdate}
+          onRejectUpdate={() => void handleRejectUpdate()}
           onBack={() => setScreen("detail")}
           loading={loading}
           error={error}

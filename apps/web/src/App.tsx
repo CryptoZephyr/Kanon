@@ -15,6 +15,7 @@ import {
   isTransientError,
   nextStepFor,
   postRevokeAttempted,
+  seededDraftTerms,
   type DescribedError,
   type NextStep,
 } from "./logic.js";
@@ -1840,7 +1841,7 @@ function UpdateReview({
   error,
 }: {
   readonly agent: AgentResource;
-  readonly currentTerms: CompanyRule[];
+  readonly currentTerms: readonly CompanyRule[];
   readonly diff?: InstallationResource["updateDiff"];
   readonly onRequest: (draft: DraftRelease, terms: CompanyRule[]) => void;
   readonly onRejectUpdate: () => void;
@@ -1853,7 +1854,14 @@ function UpdateReview({
     `${Number.parseFloat(agent.releaseVersion) + 1 || "2.0.0"}`,
   );
   const [releaseId, setReleaseId] = useState(nextReleaseId(agent.releaseId));
-  const [maxValueWei, setMaxValueWei] = useState("2");
+  const [maxValueWei, setMaxValueWei] = useState(() => {
+    const current = currentTerms[0]?.maxValueWei ?? "1";
+    try {
+      return (BigInt(current) + 1n).toString();
+    } catch {
+      return "2";
+    }
+  });
   const [packageContent, setPackageContent] = useState(
     "kanon-agent-expanded-release",
   );
@@ -2300,9 +2308,16 @@ export default function App() {
       source: installation ? "api" : proof ? "proof" : "fixture",
       installationSource,
     });
-    if (installation?.companyTerms.companyTerms.authority.rules.length) {
-      setTerms([...installation.companyTerms.companyTerms.authority.rules]);
-      setPermissionHash(installation.companyTerms.permissionHash);
+    // Only our own session's terms seed the draft form — an observed run's
+    // (possibly already-updated) terms must not leak into a new run, or the
+    // update step would ask for the boundary that is already in force.
+    const seeded = seededDraftTerms(installationSource, installation);
+    if (seeded) {
+      setTerms([...seeded.rules]);
+      setPermissionHash(seeded.permissionHash);
+    } else {
+      setTerms(DEFAULT_TERMS);
+      setPermissionHash(undefined);
     }
     // A stored session can return mid-operation — resume watching instead
     // of leaving the user on a frozen intermediate state.
@@ -2830,7 +2845,9 @@ export default function App() {
       {screen === "update" && (
         <UpdateReview
           agent={currentAgent}
-          currentTerms={terms}
+          currentTerms={
+            installation?.companyTerms.companyTerms.authority.rules ?? terms
+          }
           diff={installation?.updateDiff}
           onRequest={handlePrepareUpdate}
           onRejectUpdate={() => void handleRejectUpdate()}

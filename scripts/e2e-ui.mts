@@ -240,6 +240,9 @@ async function main() {
 
   await step("request a broader release and see EXPANDED", async () => {
     await clickButton(page, "Request a broader release");
+    await page
+      .getByLabel(/Requested per-action ceiling/)
+      .fill("4", { timeout: GENEROUS });
     await clickButton(page, "Prepare reauthorization");
     await waitForText(page, "EXPANDED");
     await shot(page, "expanded-diff");

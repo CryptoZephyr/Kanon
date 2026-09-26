@@ -1,4 +1,5 @@
 import type {
+  CompanyRule,
   EvidenceResource,
   InstallationResource,
   InstallationStatus,
@@ -435,6 +436,25 @@ export interface ActivationSubstep {
   readonly label: string;
   readonly done: boolean;
   readonly active: boolean;
+}
+
+// The terms form for a *new* run must start from the demo defaults, not from
+// whatever run happens to be observed — an earlier session's already-updated
+// terms would otherwise seed the draft and the update step would ask for the
+// boundary already in force (the API correctly rejects that as NO_CHANGE).
+export function seededDraftTerms(
+  installationSource: "session" | "observe" | "none",
+  installation: InstallationResource | undefined,
+):
+  | { readonly rules: readonly CompanyRule[]; readonly permissionHash?: string }
+  | undefined {
+  if (installationSource !== "session") return undefined;
+  const rules = installation?.companyTerms?.companyTerms?.authority.rules;
+  if (!rules?.length) return undefined;
+  return {
+    rules: [...rules],
+    permissionHash: installation?.companyTerms.permissionHash,
+  };
 }
 
 export function activationSubsteps(

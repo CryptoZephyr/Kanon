@@ -4,9 +4,11 @@ import {
   isTransientError,
   nextStepFor,
   postRevokeAttempted,
+  seededDraftTerms,
 } from "../apps/web/src/logic.js";
 import { KanonApiError } from "../apps/web/src/api.js";
 import type {
+  CompanyRule,
   EvidenceResource,
   InstallationResource,
 } from "../apps/web/src/api.js";
@@ -234,6 +236,53 @@ describe("postRevokeAttempted", () => {
 
   it("is false with no installation", () => {
     expect(postRevokeAttempted(undefined)).toBe(false);
+  });
+});
+
+describe("seededDraftTerms", () => {
+  const observedRules: readonly CompanyRule[] = [
+    {
+      chainId: 11155111,
+      asset: "native",
+      recipient: "0x8b88e1e1174edc65b08de75a5439f130da8a3dfd",
+      maxValueWei: "2",
+      rollingSpend: { maxValueWei: "2", windowSeconds: 3600 },
+    },
+  ];
+  const withTerms = installation("REVOKED", {
+    companyTerms: {
+      schema: "kanon.api.company-terms",
+      version: 1,
+      agentId: "com.example.treasury",
+      releaseId: "release-test",
+      manifestHash: "sha256:0",
+      companyTerms: {
+        schema: "kanon.company-authority-terms",
+        version: 2,
+        authority: { rules: observedRules },
+      },
+      permissionHash: "sha256:abc",
+    },
+  });
+
+  it("does not seed a new run's draft from an observed installation", () => {
+    // Regression: an earlier run's already-updated terms leaked into the next
+    // run's draft, so the update step resubmitted the boundary already in
+    // force and the API correctly answered 409 "company terms did not change".
+    expect(seededDraftTerms("observe", withTerms)).toBeUndefined();
+    expect(seededDraftTerms("none", withTerms)).toBeUndefined();
+  });
+
+  it("seeds the draft from the user's own stored session", () => {
+    const seeded = seededDraftTerms("session", withTerms);
+    expect(seeded?.rules.map((rule) => rule.maxValueWei)).toEqual(["2"]);
+    expect(seeded?.permissionHash).toBe("sha256:abc");
+  });
+
+  it("returns undefined for a session installation without rules", () => {
+    expect(
+      seededDraftTerms("session", installation("AWAITING_APPROVAL")),
+    ).toBeUndefined();
   });
 });
 

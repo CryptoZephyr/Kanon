@@ -1,0 +1,397 @@
+{
+  "schema": "kanon.ui-e2e",
+  "version": 1,
+  "baseUrl": "https://kanon-agents.vercel.app",
+  "startedAt": "2026-09-26T15:31:47.142Z",
+  "status": "passed",
+  "steps": [
+    {
+      "step": "landing loads, CTA names the outcome",
+      "ok": true,
+      "durationMs": 7698
+    },
+    {
+      "step": "workspace connects (cold start tolerated)",
+      "ok": true,
+      "durationMs": 967,
+      "detail": "API connected"
+    },
+    {
+      "step": "register a release",
+      "ok": true,
+      "durationMs": 792
+    },
+    {
+      "step": "define company authority terms",
+      "ok": true,
+      "durationMs": 1524
+    },
+    {
+      "step": "approve exact authority and wait for ACTIVE",
+      "ok": true,
+      "durationMs": 73871,
+      "detail": "status ACTIVE"
+    },
+    {
+      "step": "run the allowed action",
+      "ok": true,
+      "durationMs": 1803,
+      "detail": "transaction link visible"
+    },
+    {
+      "step": "try the forbidden action",
+      "ok": true,
+      "durationMs": 1973,
+      "detail": "policy rejection recorded"
+    },
+    {
+      "step": "request a broader release and see EXPANDED",
+      "ok": true,
+      "durationMs": 4006
+    },
+    {
+      "step": "reauthorize and reach generation 1",
+      "ok": true,
+      "durationMs": 63611,
+      "detail": "ACTIVE generation 1"
+    },
+    {
+      "step": "revoke with explicit confirmation",
+      "ok": true,
+      "durationMs": 18553,
+      "detail": "status REVOKED"
+    },
+    {
+      "step": "post-revoke attempt is refused",
+      "ok": true,
+      "durationMs": 1073,
+      "detail": "runner refusal recorded"
+    },
+    {
+      "step": "run-complete proof summary",
+      "ok": true,
+      "durationMs": 624,
+      "detail": "proof summary visible"
+    },
+    {
+      "step": "reload keeps the same run (session persistence)",
+      "ok": true,
+      "durationMs": 5255,
+      "detail": "session label and run state restored"
+    },
+    {
+      "step": "second context observes latest run read-only",
+      "ok": true,
+      "durationMs": 7004,
+      "detail": "no action buttons in observe mode"
+    },
+    {
+      "step": "docs deep link /docs",
+      "ok": true,
+      "durationMs": 1458,
+      "detail": "loads directly"
+    },
+    {
+      "step": "docs deep link /docs/start/how-it-works",
+      "ok": true,
+      "durationMs": 2167,
+      "detail": "loads directly"
+    },
+    {
+      "step": "docs deep link /docs/security/trust-model",
+      "ok": true,
+      "durationMs": 784,
+      "detail": "loads directly"
+    },
+    {
+      "step": "docs deep link /docs/help/troubleshooting",
+      "ok": true,
+      "durationMs": 1591,
+      "detail": "loads directly"
+    },
+    {
+      "step": "docs deep link /docs/proof/complete-run-example",
+      "ok": true,
+      "durationMs": 624,
+      "detail": "loads directly"
+    },
+    {
+      "step": "docs deep link /docs/reference/installation-states",
+      "ok": true,
+      "durationMs": 541,
+      "detail": "loads directly"
+    },
+    {
+      "step": "docs mobile nav at 390px",
+      "ok": true,
+      "durationMs": 4876,
+      "detail": "mobile nav opens"
+    },
+    {
+      "step": "app mobile at 390px",
+      "ok": true,
+      "durationMs": 1659,
+      "detail": "landing stacks at 390px"
+    }
+  ],
+  "timings": [
+    {
+      "kind": "status-get",
+      "method": "GET",
+      "path": "/api/v1/status",
+      "status": 200,
+      "durationMs": 2081
+    },
+    {
+      "kind": "release-post",
+      "method": "POST",
+      "path": "/api/v1/organizations/organization-kanon/agents/com.example.treasury/releases",
+      "status": 200,
+      "durationMs": 506
+    },
+    {
+      "kind": "installation-get",
+      "method": "GET",
+      "path": "/api/v1/organizations/organization-kanon/installations/installation-release-3wh-20260926-hkp0kk",
+      "status": 200,
+      "durationMs": 1289
+    },
+    {
+      "kind": "terms-post",
+      "method": "POST",
+      "path": "/api/v1/organizations/organization-kanon/installations/installation-release-3wh-20260926-61i2lu/company-terms",
+      "status": 200,
+      "durationMs": 535
+    },
+    {
+      "kind": "approval-post",
+      "method": "POST",
+      "path": "/api/v1/organizations/organization-kanon/installations/installation-release-3wh-20260926-61i2lu/approval",
+      "status": 202,
+      "durationMs": 1028
+    },
+    {
+      "kind": "installation-get",
+      "method": "GET",
+      "path": "/api/v1/organizations/organization-kanon/installations/installation-release-3wh-20260926-61i2lu",
+      "status": 200,
+      "durationMs": 709
+    },
+    {
+      "kind": "installation-get",
+      "method": "GET",
+      "path": "/api/v1/organizations/organization-kanon/installations/installation-release-3wh-20260926-61i2lu",
+      "status": 200,
+      "durationMs": 547
+    },
+    {
+      "kind": "installation-get",
+      "method": "GET",
+      "path": "/api/v1/organizations/organization-kanon/installations/installation-release-3wh-20260926-61i2lu",
+      "status": 200,
+      "durationMs": 807
+    },
+    {
+      "kind": "installation-get",
+      "method": "GET",
+      "path": "/api/v1/organizations/organization-kanon/installations/installation-release-3wh-20260926-61i2lu",
+      "status": 200,
+      "durationMs": 980
+    },
+    {
+      "kind": "installation-get",
+      "method": "GET",
+      "path": "/api/v1/organizations/organization-kanon/installations/installation-release-3wh-20260926-61i2lu",
+      "status": 200,
+      "durationMs": 804
+    },
+    {
+      "kind": "installation-get",
+      "method": "GET",
+      "path": "/api/v1/organizations/organization-kanon/installations/installation-release-3wh-20260926-61i2lu",
+      "status": 200,
+      "durationMs": 636
+    },
+    {
+      "kind": "installation-get",
+      "method": "GET",
+      "path": "/api/v1/organizations/organization-kanon/installations/installation-release-3wh-20260926-61i2lu",
+      "status": 200,
+      "durationMs": 669
+    },
+    {
+      "kind": "installation-get",
+      "method": "GET",
+      "path": "/api/v1/organizations/organization-kanon/installations/installation-release-3wh-20260926-61i2lu",
+      "status": 200,
+      "durationMs": 500
+    },
+    {
+      "kind": "status-get",
+      "method": "GET",
+      "path": "/api/v1/status",
+      "status": 200,
+      "durationMs": 1174
+    },
+    {
+      "kind": "installation-get",
+      "method": "GET",
+      "path": "/api/v1/organizations/organization-kanon/installations/installation-release-3wh-20260926-61i2lu",
+      "status": 200,
+      "durationMs": 752
+    },
+    {
+      "kind": "installation-get",
+      "method": "GET",
+      "path": "/api/v1/organizations/organization-kanon/installations/installation-release-3wh-20260926-61i2lu",
+      "status": 200,
+      "durationMs": 671
+    },
+    {
+      "kind": "execution-post",
+      "method": "POST",
+      "path": "/api/v1/organizations/organization-kanon/installations/installation-release-3wh-20260926-61i2lu/executions",
+      "status": 200,
+      "durationMs": 1214
+    },
+    {
+      "kind": "release-post",
+      "method": "POST",
+      "path": "/api/v1/organizations/organization-kanon/agents/com.example.treasury/releases",
+      "status": 200,
+      "durationMs": 941
+    },
+    {
+      "kind": "terms-post",
+      "method": "POST",
+      "path": "/api/v1/organizations/organization-kanon/installations/installation-release-3wh-20260926-61i2lu/company-terms",
+      "status": 200,
+      "durationMs": 517
+    },
+    {
+      "kind": "approval-post",
+      "method": "POST",
+      "path": "/api/v1/organizations/organization-kanon/installations/installation-release-3wh-20260926-61i2lu/approval",
+      "status": 202,
+      "durationMs": 1539
+    },
+    {
+      "kind": "installation-get",
+      "method": "GET",
+      "path": "/api/v1/organizations/organization-kanon/installations/installation-release-3wh-20260926-61i2lu",
+      "status": 200,
+      "durationMs": 608
+    },
+    {
+      "kind": "installation-get",
+      "method": "GET",
+      "path": "/api/v1/organizations/organization-kanon/installations/installation-release-3wh-20260926-61i2lu",
+      "status": 200,
+      "durationMs": 538
+    },
+    {
+      "kind": "installation-get",
+      "method": "GET",
+      "path": "/api/v1/organizations/organization-kanon/installations/installation-release-3wh-20260926-61i2lu",
+      "status": 200,
+      "durationMs": 409
+    },
+    {
+      "kind": "installation-get",
+      "method": "GET",
+      "path": "/api/v1/organizations/organization-kanon/installations/installation-release-3wh-20260926-61i2lu",
+      "status": 200,
+      "durationMs": 958
+    },
+    {
+      "kind": "installation-get",
+      "method": "GET",
+      "path": "/api/v1/organizations/organization-kanon/installations/installation-release-3wh-20260926-61i2lu",
+      "status": 200,
+      "durationMs": 547
+    },
+    {
+      "kind": "installation-get",
+      "method": "GET",
+      "path": "/api/v1/organizations/organization-kanon/installations/installation-release-3wh-20260926-61i2lu",
+      "status": 200,
+      "durationMs": 569
+    },
+    {
+      "kind": "status-get",
+      "method": "GET",
+      "path": "/api/v1/status",
+      "status": 200,
+      "durationMs": 963
+    },
+    {
+      "kind": "installation-get",
+      "method": "GET",
+      "path": "/api/v1/organizations/organization-kanon/installations/installation-release-3wh-20260926-61i2lu",
+      "status": 200,
+      "durationMs": 962
+    },
+    {
+      "kind": "installation-get",
+      "method": "GET",
+      "path": "/api/v1/organizations/organization-kanon/installations/installation-release-3wh-20260926-61i2lu",
+      "status": 200,
+      "durationMs": 765
+    },
+    {
+      "kind": "installation-get",
+      "method": "GET",
+      "path": "/api/v1/organizations/organization-kanon/installations/installation-release-3wh-20260926-61i2lu",
+      "status": 200,
+      "durationMs": 667
+    },
+    {
+      "kind": "revoke-post",
+      "method": "POST",
+      "path": "/api/v1/organizations/organization-kanon/installations/installation-release-3wh-20260926-61i2lu/revoke",
+      "status": 200,
+      "durationMs": 15818
+    },
+    {
+      "kind": "execution-post",
+      "method": "POST",
+      "path": "/api/v1/organizations/organization-kanon/installations/installation-release-3wh-20260926-61i2lu/executions",
+      "status": 200,
+      "durationMs": 700
+    },
+    {
+      "kind": "status-get",
+      "method": "GET",
+      "path": "/api/v1/status",
+      "status": 200,
+      "durationMs": 700
+    },
+    {
+      "kind": "installation-get",
+      "method": "GET",
+      "path": "/api/v1/organizations/organization-kanon/installations/installation-release-3wh-20260926-61i2lu",
+      "status": 200,
+      "durationMs": 2
+    },
+    {
+      "kind": "status-get",
+      "method": "GET",
+      "path": "/api/v1/status",
+      "status": 200,
+      "durationMs": 1863
+    },
+    {
+      "kind": "installation-get",
+      "method": "GET",
+      "path": "/api/v1/organizations/organization-kanon/installations/installation-release-3wh-20260926-61i2lu",
+      "status": 200,
+      "durationMs": 679
+    }
+  ],
+  "sessionStorageKeys": [
+    "cookies",
+    "origins"
+  ],
+  "consoleErrors": [],
+  "pageErrors": []
+}

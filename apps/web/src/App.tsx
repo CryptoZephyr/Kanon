@@ -2630,7 +2630,9 @@ export default function App() {
         }));
         setPermissionHash(updated.companyTerms.permissionHash);
       }
-      setScreen("review");
+      // Stay on the update screen: the installation now carries updateDiff,
+      // which surfaces the EXPANDED classification and changed paths before
+      // the user continues to reauthorization.
     } catch (caught) {
       setError(getErrorMessage(caught));
     } finally {

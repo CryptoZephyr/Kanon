@@ -291,9 +291,16 @@ async function main() {
 
   await step("reload keeps the same run (session persistence)", async () => {
     await page.reload({ waitUntil: "domcontentloaded" });
+    // Reload lands on the landing screen; re-enter the workspace to resume.
+    await clickButton(page, "Start a live authority run");
+    await page
+      .getByText("API connected")
+      .waitFor({ state: "visible", timeout: GENEROUS });
     await waitForText(page, "YOUR RUN — SAVED IN THIS BROWSER");
+    await clickButton(page, "View the proof summary");
+    await waitForText(page, "Run complete — the proof");
     await shot(page, "reloaded-session");
-    return "session label restored";
+    return "session label and run state restored";
   });
 
   const context1Storage = await context.storageState();

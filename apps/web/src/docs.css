@@ -494,6 +494,9 @@
   .docs-mobile-panel {
     display: block;
   }
+  .docs-mobile-panel .docs-sidebar {
+    display: block;
+  }
   .docs-mobile-nav-button {
     display: inline-block;
   }

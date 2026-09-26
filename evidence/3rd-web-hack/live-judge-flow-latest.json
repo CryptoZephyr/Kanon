@@ -2,7 +2,7 @@
   "schema": "kanon.live-judge-flow",
   "version": 1,
   "baseUrl": "https://kanon-agents.vercel.app/api",
-  "startedAt": "2026-09-26T00:45:36.804Z",
+  "startedAt": "2026-09-26T11:28:21.683Z",
   "dryRun": false,
   "steps": [
     "status",
@@ -18,16 +18,16 @@
     "post-revoke-rejected"
   ],
   "status": "passed",
-  "installationId": "installation-release-3wh-20260926-qxtlj1",
-  "releaseV1": "release-3wh-20260926-qxtlj1",
+  "installationId": "installation-release-3wh-20260926-d39rn2",
+  "releaseV1": "release-3wh-20260926-d39rn2",
   "permissionHashV1": "sha256:7171a1991636a5923a86991b8b9f284b9a5a5082458645a05d7f69f0f0eed56b",
   "ensRecordsV1": {
     "kanon.agentId": "com.example.treasury",
-    "kanon.release": "release-3wh-20260926-qxtlj1",
+    "kanon.release": "release-3wh-20260926-d39rn2",
     "kanon.permissionHash": "sha256:7171a1991636a5923a86991b8b9f284b9a5a5082458645a05d7f69f0f0eed56b",
     "kanon.status": "approved"
   },
-  "allowedTransactionHash": "0xb23e180fe66143c13f887644279eb6e1286c4c850fecd1b3666e1e4f619bd20e",
+  "allowedTransactionHash": "0xbe5c6790327da30346629ac032c3f2fe3e324f9f91682a9b8a7b519a5f321ca2",
   "forbiddenRejectionCode": "PRIVY_POLICY_REJECTED_400",
   "classification": "EXPANDED",
   "changedPaths": [
@@ -37,13 +37,13 @@
   "revocation": {
     "schema": "kanon.api.revoke",
     "version": 1,
-    "installationId": "installation-release-3wh-20260926-qxtlj1",
-    "decisionId": "decision-release-3wh-20260926-qxtlj1-v2-revoke",
+    "installationId": "installation-release-3wh-20260926-d39rn2",
+    "decisionId": "decision-release-3wh-20260926-d39rn2-v2-revoke",
     "status": "REVOKED",
     "privyAuthorityRevoked": true,
     "ensStatus": "revoked",
     "postRevokeExecutionFailed": true
   },
   "postRevokeRejectionCode": "RUNNER_REFUSED_STALE_OR_REVOKED",
-  "completedAt": "2026-09-26T00:48:16.823Z"
+  "completedAt": "2026-09-26T11:30:51.628Z"
 }

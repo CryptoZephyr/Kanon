@@ -93,7 +93,9 @@ Most agent-wallet tools answer "how does an agent get a wallet?" Kanon answers a
 
 ## What's new in the 3rd-Web-Hack release
 
-Kanon was first built during ETHOnline 2026 (September 2026). This release is the work done for 3rd-Web-Hack to make it a dependable, judge-repeatable prototype:
+**Origin and timeline.** Before September 11, 2026, Kanon was only written product notes. All of its code was written between September 12 and September 26, 2026, which falls inside this hackathon's submission period (August 22 to September 27). The same build was also created for ETHOnline 2026. The public Git history is unchanged and shows every commit date.
+
+Work from September 25 to 26 made it a dependable prototype that judges can repeat:
 
 - **Reliable hosted backend.** The workspace no longer sticks on "API pending". It retries with timeouts, explains free-tier wake-ups, and offers a manual retry. Services start faster and a scheduled job keeps them warm during judging.
 - **Safe public demo.** Visitor requests no longer carry the company API token. A restricted demo role, a terms ceiling, rate limits and a proxy route allowlist stop visitors from damaging the shared Sepolia state or draining the demo wallet.

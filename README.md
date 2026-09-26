@@ -142,9 +142,11 @@ Details and reporting instructions: [SECURITY.md](SECURITY.md).
 
 ## Project history
 
-Kanon was designed and first built during ETHOnline 2026 (September 2026), starting from documentation only. That build produced the permission engine, Privy compiler, ENSv2 identity adapter, lifecycle API, runner and frontend. Git history shows that work unchanged.
+Before September 11, 2026, Kanon existed only as written product notes; there was no code. Every line of code in this repository was written between September 12 and September 26, 2026, which is inside the 3rd-Web-Hack submission period (August 22 to September 27, 2026). The first commit is `09c187b` on September 12, and the Git history is unchanged.
 
-The 3rd-Web-Hack release (September 25 to 27, 2026) is the work that made Kanon a dependable, repeatable prototype for public judging:
+The same build was also created for ETHOnline 2026. That first stage (September 12 to 14) produced the permission engine, Privy compiler, ENSv2 identity adapter, lifecycle API, runner and frontend.
+
+The second stage (September 25 to 26) is the work that made Kanon a dependable, repeatable prototype for public judging in 3rd-Web-Hack:
 
 - Fixed the workspace sticking on "API pending" with timed retries, a visible wake-up state and faster service start-up, plus a keep-warm workflow.
 - Removed the company API token from the public proxy. Added a restricted demo role, a demo terms ceiling, rate limits and a proxy route allowlist.

@@ -43,7 +43,7 @@ If the workspace says another session is live, wait for the time shown (at most 
 
 ## What's new in this release
 
-Kanon was first built for ETHOnline 2026. The 3rd-Web-Hack release adds: reliable backend connection and start-up, a restricted public demo role in place of the company token, a session lease that makes the flow repeatable without manual ENS resets, allowed/forbidden/post-revoke execution in the UI, the judge path, a live ENS panel, a reject-update path, `pnpm smoke:live`, and new tests. Details: [README → Project history](../README.md#project-history).
+All of Kanon's code was written September 12 to 26, 2026, inside the 3rd-Web-Hack submission period (August 22 to September 27). Before that it existed only as product notes. The same build was also created for ETHOnline 2026. The work since September 25 adds: reliable backend connection and start-up, a restricted public demo role in place of the company token, a session lease that makes the flow repeatable without manual ENS resets, allowed/forbidden/post-revoke execution in the UI, the judge path, a live ENS panel, a reject-update path, `pnpm smoke:live`, and new tests. Details: [README → Project history](../README.md#project-history).
 
 ## Evidence
 

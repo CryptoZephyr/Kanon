@@ -149,6 +149,25 @@ export interface InstallationResource {
   readonly companyTerms: CompanyTermsResource;
   readonly approval?: ApprovalResource;
   readonly activeAuthority?: AuthorityResource;
+  readonly recordedAuthority?: {
+    readonly privy?: {
+      readonly walletId: string;
+      readonly delegatedSignerId: string;
+      readonly policyId: string;
+      readonly executionMethod: "eth_signTransaction" | "eth_sendTransaction";
+      readonly generation: number;
+      readonly status: "ACTIVE" | "REVOKED";
+    };
+    readonly ens?: {
+      readonly agentName: string;
+      readonly namespaceName: string;
+      readonly resolver: string;
+      readonly records: Record<string, string>;
+      readonly status: string;
+      readonly observedAt: string;
+      readonly source: "live" | "recorded";
+    };
+  };
   readonly updateDiff?: UpdateDiffResource;
   readonly evidence: readonly EvidenceResource[];
   readonly revoke?: {

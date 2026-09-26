@@ -258,6 +258,26 @@ function ensReadback(state: {
   };
 }
 
+async function recordedEnsReadback() {
+  try {
+    const ensRuntime = await import(
+      "../../runner/src/lifecycle-t11-t13-probe.js"
+    ).then((module) => module.createEnsRuntime());
+    return await Promise.race([
+      ensRuntime.adapter.readApprovedState(ensRuntime.identity),
+      new Promise<never>((_resolve, reject) => {
+        const timer = setTimeout(
+          () => reject(new Error("ENS read timed out")),
+          10_000,
+        );
+        timer.unref();
+      }),
+    ]);
+  } catch {
+    return undefined;
+  }
+}
+
 async function installationResource(
   database: DeploymentDatabase,
   installation: Installation,
@@ -272,9 +292,14 @@ async function installationResource(
       )
     : undefined;
   if (installation.status !== "ACTIVE") {
+    const recordedEnsRead =
+      installation.status === "REVOKED" && installation.ens !== undefined
+        ? await recordedEnsReadback()
+        : undefined;
     return createInstallationResource({
       installation,
       ...(pendingDiff === undefined ? {} : { pendingDiff }),
+      ...(recordedEnsRead === undefined ? {} : { recordedEnsRead }),
       evidence,
     });
   }

@@ -1142,6 +1142,12 @@ function AgentDetail({
     );
   const revoke = installation?.revoke;
   const retirement = installation?.retirement;
+  const recorded = installation?.recordedAuthority;
+  const ensName = ens?.binding.agentName ?? recorded?.ens?.agentName;
+  const ensPendingLabel =
+    status === "AWAITING_APPROVAL" || status === "CONFIGURING_AUTHORITY"
+      ? "Assigned on activation"
+      : "Identity pending";
   return (
     <div className="screen detail-screen" data-reveal>
       <ScreenBack label="Back to agents" onClick={onBack} />
@@ -1160,7 +1166,7 @@ function AgentDetail({
           <div className="detail-identity">
             <div>
               <MetaLabel>ENS identity</MetaLabel>
-              <strong>{ens?.binding.agentName ?? "Identity pending"}</strong>
+              <strong>{ensName ?? ensPendingLabel}</strong>
             </div>
             <div>
               <MetaLabel>Current release</MetaLabel>
@@ -1250,6 +1256,66 @@ function AgentDetail({
                   {ens.records["kanon.status"] ?? "—"}
                 </strong>
               </Rule>
+            </div>
+          )}
+          {!ens && recorded?.ens && (
+            <div className="authority-summary">
+              <div className="panel-caption">
+                <span>
+                  {recorded.ens.source === "live"
+                    ? "Current on-chain records"
+                    : "Last recorded records"}
+                </span>
+                <span className="mono">
+                  {recorded.ens.source === "live" ? "LIVE READ" : "RECORDED"}
+                </span>
+              </div>
+              <Rule>
+                <span>Agent name</span>
+                <strong className="mono">{recorded.ens.agentName}</strong>
+              </Rule>
+              <Rule>
+                <span>Resolver</span>
+                <a
+                  className="mono"
+                  href={`https://sepolia.etherscan.io/address/${recorded.ens.resolver}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {displayAddress(recorded.ens.resolver)}
+                </a>
+              </Rule>
+              <Rule>
+                <span>kanon.agentId</span>
+                <strong className="mono">
+                  {recorded.ens.records["kanon.agentId"] ?? "—"}
+                </strong>
+              </Rule>
+              <Rule>
+                <span>kanon.release</span>
+                <strong className="mono">
+                  {recorded.ens.records["kanon.release"] ?? "—"}
+                </strong>
+              </Rule>
+              <Rule>
+                <span>kanon.permissionHash</span>
+                <strong className="mono hash-full">
+                  {recorded.ens.records["kanon.permissionHash"] ?? "—"}
+                </strong>
+              </Rule>
+              <Rule>
+                <span>kanon.status</span>
+                <strong className="mono">
+                  {recorded.ens.records["kanon.status"] ?? "—"}
+                </strong>
+              </Rule>
+              {recorded.ens.records["kanon.release"] &&
+                recorded.ens.records["kanon.release"] !== agent.releaseId && (
+                  <p className="aside-note">
+                    A later session has since used this identity — the on-chain
+                    record above shows the most recent release bound to it.
+                  </p>
+                )}
             </div>
           )}
           {revoke && (
@@ -1388,26 +1454,31 @@ function AgentDetail({
             <span>Privy method</span>
             <strong className="mono">
               {installation?.activeAuthority?.privy.executionMethod ??
+                recorded?.privy?.executionMethod ??
                 "Pending"}
             </strong>
           </div>
           <div className="evidence-item">
             <span>Policy</span>
             <strong className="mono">
-              {displayHash(installation?.activeAuthority?.privy.policyId)}
+              {displayHash(
+                installation?.activeAuthority?.privy.policyId ??
+                  recorded?.privy?.policyId,
+              )}
             </strong>
           </div>
           <div className="evidence-item">
             <span>Privy status</span>
             <strong className="mono">
               {installation?.activeAuthority?.privy.status ??
+                recorded?.privy?.status ??
                 (status === "REVOKED" ? "REVOKED" : "Pending")}
             </strong>
           </div>
           <div className="evidence-item">
             <span>ENS resolver</span>
             <strong className="mono">
-              {displayAddress(ens?.resolver ?? "")}
+              {displayAddress(ens?.resolver ?? recorded?.ens?.resolver ?? "")}
             </strong>
           </div>
           <div className="evidence-item">

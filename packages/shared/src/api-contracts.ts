@@ -266,6 +266,30 @@ export type ApiEvidenceResource =
   | ExecutionEvidenceResource
   | RevocationEvidenceResource;
 
+export interface RecordedPrivyAuthorityResource {
+  readonly walletId: string;
+  readonly delegatedSignerId: string;
+  readonly policyId: string;
+  readonly executionMethod: PrivyExecutionMethod;
+  readonly generation: number;
+  readonly status: "ACTIVE" | "REVOKED";
+}
+
+export interface RecordedEnsAuthorityResource {
+  readonly agentName: string;
+  readonly namespaceName: string;
+  readonly resolver: string;
+  readonly records: Readonly<Record<string, string>>;
+  readonly status: string;
+  readonly observedAt: string;
+  readonly source: "live" | "recorded";
+}
+
+export interface RecordedAuthorityResource {
+  readonly privy?: RecordedPrivyAuthorityResource;
+  readonly ens?: RecordedEnsAuthorityResource;
+}
+
 export interface UpdateDiffResource {
   readonly schema: "kanon.api.update-diff";
   readonly version: ApiContractVersion;
@@ -303,6 +327,7 @@ export interface InstallationResource {
   readonly companyTerms: CompanyTermsResource;
   readonly approval?: ApprovalResource;
   readonly activeAuthority?: ActiveAuthorityResource;
+  readonly recordedAuthority?: RecordedAuthorityResource;
   readonly updateDiff?: UpdateDiffResource;
   readonly evidence: readonly ApiEvidenceResource[];
   readonly revoke?: RevokeResource;
@@ -778,6 +803,7 @@ export function createRevokeResource(input: {
 export function createInstallationResource(input: {
   readonly installation: Installation;
   readonly ensReadback?: EnsApprovedStateRead;
+  readonly recordedEnsRead?: EnsApprovedStateRead;
   readonly pendingDiff?: PermissionDiff;
   readonly evidence?: readonly ApiEvidenceResource[];
 }): InstallationResource {
@@ -825,6 +851,56 @@ export function createInstallationResource(input: {
           revocation: installation.revocation,
         });
 
+  const recordedAuthority: RecordedAuthorityResource | undefined =
+    installation.status !== "ACTIVE" &&
+    (installation.privy !== undefined || installation.ens !== undefined)
+      ? {
+          ...(installation.privy === undefined
+            ? {}
+            : {
+                privy: {
+                  walletId: installation.privy.walletId,
+                  delegatedSignerId: installation.privy.delegatedSignerId,
+                  policyId: installation.privy.policyId,
+                  executionMethod: installation.privy.executionMethod,
+                  generation: installation.privy.generation,
+                  status: installation.privy.status,
+                },
+              }),
+          ...(installation.ens === undefined
+            ? {}
+            : {
+                ens:
+                  input.recordedEnsRead === undefined
+                    ? {
+                        agentName: installation.ens.binding.agentName,
+                        namespaceName: installation.ens.binding.namespaceName,
+                        resolver: installation.ens.binding.resolver,
+                        records: {
+                          "kanon.agentId": installation.ens.agentId,
+                          "kanon.release": installation.ens.releaseId,
+                          "kanon.permissionHash":
+                            installation.ens.permissionHash,
+                          "kanon.status": installation.ens.status,
+                        },
+                        status: installation.ens.status,
+                        observedAt: installation.ens.observedAt,
+                        source: "recorded" as const,
+                      }
+                    : {
+                        agentName: input.recordedEnsRead.binding.agentName,
+                        namespaceName:
+                          input.recordedEnsRead.binding.namespaceName,
+                        resolver: input.recordedEnsRead.resolver,
+                        records: input.recordedEnsRead.records,
+                        status: input.recordedEnsRead.records["kanon.status"],
+                        observedAt: new Date().toISOString(),
+                        source: "live" as const,
+                      },
+              }),
+        }
+      : undefined;
+
   return Object.freeze({
     schema: "kanon.api.installation" as const,
     version: API_CONTRACT_VERSION,
@@ -838,6 +914,7 @@ export function createInstallationResource(input: {
       ? {}
       : { approval: createApprovalResource(installation.approvedDecision) }),
     ...(activeAuthority === undefined ? {} : { activeAuthority }),
+    ...(recordedAuthority === undefined ? {} : { recordedAuthority }),
     ...(updateDiff === undefined ? {} : { updateDiff }),
     evidence: Object.freeze([...(input.evidence ?? [])]),
     ...(revoke === undefined ? {} : { revoke }),

@@ -1,27 +1,16 @@
 # Kanon implementation status
 
-This page separates verified behavior from local tests, known limits, and future work. It is a public summary of the current checkout and does not contain provider secrets or owner credentials.
+What is live, what is tested locally, what is limited, and what is future work. Release: 3rd-Web-Hack (`v0.3.0`).
 
-## Live and verified
+## Live and verified on Sepolia
 
-- Frontend: [https://kanon-agents.vercel.app](https://kanon-agents.vercel.app), deployed on Vercel.
-- Backend: Render API and runner services with Neon PostgreSQL, connected through the server-side API boundary.
-- Network: Ethereum Sepolia, chain ID `11155111`.
-- ENSv2 namespace: `kanon-ethonline-2026.eth` with the representative agent identity beneath the `agents` subname.
-- Privy: delegated signer, signer-specific policy, allowed execution, forbidden rejection, signer removal, and post-revoke failure were verified.
-- Lifecycle: activation, permission-aware update, reauthorization, ENS approved-state synchronization, revoke, and unauthorized restore rejection were verified.
-- Browser rehearsals: three clean create-to-revoke runs reached active generation 1 and revoked generation 2.
-
-Evidence records:
-
-- [T17 deployment and browser evidence](../evidence/deployment/t17-live-latest.json)
-- [T11 to T13 lifecycle evidence](../evidence/lifecycle/t11-t13-latest.json)
-- [ENSv2 write and permission evidence](../evidence/ens/t6-write-latest.json)
-- [Privy compiler evidence](../evidence/privy/t5-compiler-latest.json)
+- Frontend and proxy: [kanon-agents.vercel.app](https://kanon-agents.vercel.app).
+- API and runner on Render, Neon PostgreSQL.
+- Full judge flow through the public proxy, twice in a row, the second starting from the revoked fixture with no manual reset: release registration, company terms, human approval, Privy policy and delegated signer, ENS record readback, allowed transaction, forbidden rejection by Privy, `EXPANDED` update blocked, reauthorization to generation 1, revocation with signer removal and ENS `revoked`, post-revoke rejection. Evidence: [run 1](../evidence/3rd-web-hack/live-judge-flow-run-1.json), [run 2](../evidence/3rd-web-hack/live-judge-flow-run-2.json).
+- Public demo boundary: company token absent from Vercel; operator routes refused; out-of-bounds demo terms refused. See [DEPLOYMENT.md](../DEPLOYMENT.md#live-checks).
+- From the original build: ENSv2 namespace, registry and resolver setup with an unauthorized-writer rejection ([evidence](../evidence/ens/t6-write-latest.json)); Privy compiler probes ([evidence](../evidence/privy/t5-compiler-latest.json)); operator lifecycle proof including unauthorized ENS restore rejection ([evidence](../evidence/lifecycle/t11-t13-latest.json)).
 
 ## Tested locally
-
-The following commands pass from a clean dependency install:
 
 ```text
 pnpm install --frozen-lockfile
@@ -32,20 +21,27 @@ pnpm format:check
 pnpm build:web
 ```
 
-The local suite covers the domain contract, deterministic permission hashing, permission diffs, method-aware policy compilation, ENS identity binding, lifecycle gates, the isolated runner, API contracts, and tooling smoke checks.
+The suite covers manifest hashing, permission normalization and diffing, the method-aware policy compiler, ENS identity binding, lifecycle transitions (including update withdrawal and authority retirement), the isolated runner, API contracts, the demo guard (roles, route allowlist, terms ceiling, rate limits, execution targets), the session lease, and the proxy header and route policy.
 
-## Known limitations and blockers
+## Implemented but not exercised live
 
-- This is a Sepolia hackathon proof, not a mainnet or production custody deployment.
-- The repository is public under the MIT License in `LICENSE`.
-- The exact `kanon.agents.vercel.app` alias is reserved for another Vercel account. The verified default Vercel alias is used.
-- Render free services can sleep after idle.
-- Render uses native Node.js services from `render.yaml`; unused Dockerfiles are excluded from the public repository.
-- The persistent ENS fixture needs an explicit owner-authorized baseline reset before repeating a full activation-to-revoke proof.
-- The negative provider-failure rollback variant for the update API remains future integration work.
+- The retirement fallback for stale sessions that cannot be revoked normally. No such rows existed at deployment; the path is covered by unit tests.
+- The operator lifecycle proof's self-written ENS baseline. The code path is in place; the proof was not re-run in this release.
+
+## Known limitations
+
+- Sepolia testnet only. No mainnet deployment, no audit, no production custody, no external users.
+- Narrow authority grammar: native ETH, one exact recipient per rule, per-action and rolling value ceilings, optional calldata and validity constraints. ERC-20 assets and request-count limits fail closed.
+- Privy aggregations carry Privy's documented stateful-policy concurrency caveat.
+- The hosted demo shares one wallet, signer and ENS name, so one session holds authority at a time.
+- In-memory rate limits reset when the API restarts.
+- ENSv2 on Sepolia is beta.
+- Render free services sleep when idle; keep-warm runs until 2026-10-03.
 
 ## Future work
 
-- Add a public demo recording and final submission artifacts.
-- Add the provider-failure rollback integration test.
-- Revisit stronger production operational controls after the testnet proof.
+- Quorum approval for large authority changes.
+- ERC-20 stablecoin terms.
+- Per-organization wallets and ENS namespaces.
+- Provider-failure rollback integration tests for updates.
+- Independent security review before any mainnet use.

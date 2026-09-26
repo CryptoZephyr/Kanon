@@ -1,96 +1,65 @@
-# Kanon Deployment
+# Kanon deployment record
 
-Canonical deployment record for the current repository and hosted services.
+Current deployment of the 3rd-Web-Hack release (`v0.3.0`, release label `kanon-3rd-web-hack-2026.09`). No secret values are recorded here.
 
-Status as of 2026-09-25: T15, T16, and T17 are complete. The approved frontend is live, its server-side API proxy is verified on deep routes, and three browser rehearsals completed the disposable create, approval, active, update, reauthorization, and revoke flow. The requested `kanon.agents.vercel.app` alias is unavailable because Vercel reserves `*.agents.vercel.app` for another account. The default production alias remains the verified public entry point.
+## Live services
 
-## Repository
+| Service          | Provider                                           | URL                                                                                                                     | Notes                                                                                                                                    |
+| ---------------- | -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| Frontend + proxy | Vercel project `kanon-agents`                      | https://kanon-agents.vercel.app                                                                                         | Static Vite build plus the `api/kanon-proxy.ts` function (`maxDuration` 120 s)                                                           |
+| API              | Render `kanon-api` (`srv-daj103tg1s2s7391ov3g`)    | https://kanon-api.onrender.com/healthz                                                                                  | Native Node.js 22, start command `node --import tsx apps/api/src/server.ts`                                                              |
+| Runner           | Render `kanon-runner` (`srv-daj102fqj5pc73bs02r0`) | https://kanon-runner.onrender.com/healthz                                                                               | Native Node.js 22, start command `node --import tsx apps/runner/src/server.ts`                                                           |
+| Database         | Neon PostgreSQL                                    | private                                                                                                                 | Installations, releases, evidence, proofs                                                                                                |
+| Chain            | Ethereum Sepolia                                   | chain ID `11155111`                                                                                                     | Privy demo wallet `0x42D5Fb257d479187607D47C19433Be6aEEd4a9A9`; organization control wallet `0x8b88E1E1174eDC65B08de75A5439f130da8A3DFd` |
+| ENS              | ENSv2 on Sepolia                                   | `kanon-ethonline-2026.eth` → `agents.kanon-ethonline-2026.eth` → `representative-agent.agents.kanon-ethonline-2026.eth` | Namespace registered during the original build and reused unchanged                                                                      |
 
-- Repository: `https://github.com/CryptoZephyr/Kanon`
-- Visibility: public
-- Branch: `main`
-- Previous verified application commit before this documentation reconciliation: `a5ebf6405c942631516ccfe630f9ab5c594c8879`
-- Source commit used for the current Vercel production deployment: `ed3e190`
-- Node.js: `22.23.2`
-- pnpm: `11.5.0`
-- Frontend package: `apps/web`
-- Build command: `pnpm build:web`
-- Frontend output: Vite `dist`
+Render deploys the API and runner automatically from `main`. The Vercel project is deployed with the Vercel CLI (`vercel --prod`).
 
-## Live backend
+## Credentials and where they live
 
-| Service  | Provider | URL                               | Service ID                     | Latest live deployment                       |
-| -------- | -------- | --------------------------------- | ------------------------------ | -------------------------------------------- |
-| API      | Render   | https://kanon-api.onrender.com    | `srv-daj103tg1s2s7391ov3g`     | `dep-dajt9kojo6nc73cn9jqg`, commit `85c7434` |
-| Runner   | Render   | https://kanon-runner.onrender.com | `srv-daj102fqj5pc73bs02r0`     | `dep-dajt9kojo6nc73cn9jhg`, commit `85c7434` |
-| Database | Neon     | private connection                | project `kanon-ethonline-2026` | PostgreSQL 18, `aws-eu-central-1`            |
+| Variable                                  | API (Render) | Runner (Render) | Vercel | Browser |
+| ----------------------------------------- | :----------: | :-------------: | :----: | :-----: |
+| `KANON_COMPANY_API_TOKEN` (operator)      |     yes      |       no        | **no** |   no    |
+| `KANON_DEMO_API_TOKEN` (public demo role) |     yes      |       no        |  yes   |   no    |
+| Privy app secret                          |     yes      |       yes       |   no   |   no    |
+| Privy owner authorization key             |     yes      |       no        |   no   |   no    |
+| Privy agent signer key                    |      no      |       yes       |   no   |   no    |
+| ENS control (writer) key                  |     yes      |       no        |   no   |   no    |
+| `RUNNER_SHARED_SECRET`                    |     yes      |       yes       |   no   |   no    |
+| `DATABASE_URL`                            |     yes      |       yes       |   no   |   no    |
 
-Render uses native Node.js 22 services with the build and start commands in `render.yaml`. No Docker image is required for the current deployment.
+The company API token was removed from Vercel in this release. Visitor requests carry only the demo credential, which the API limits to the guided flow.
 
-Verified backend state:
+## 3rd-Web-Hack deployment (2026-09-26)
 
-- API health returned `ok` and database `ok`.
-- Runner health returned `ok` and database `ok`.
-- Render environment state contains the company API token and backend control credentials. No secret value is recorded here or in the repository.
-- ENS writes remain limited to the owner-authorized Sepolia namespace `kanon-ethonline-2026.eth`.
+- Application commit `3537e80` deployed to Render: API deploy `dep-dargin67bikc739be9tg`, runner deploy `dep-dargin67bikc739bea90`. Both `/healthz` endpoints report `release: "kanon-3rd-web-hack-2026.09"`.
+- Start-up now takes about 19 seconds from process start to listening, down from about 30 seconds, because the start command no longer downloads pnpm through corepack on every boot.
+- Vercel production deployment aliased to `https://kanon-agents.vercel.app` with `KANON_DEMO_API_TOKEN` set and `KANON_COMPANY_API_TOKEN` removed.
+- Demo wallet top-up of 0.02 Sepolia ETH from the organization control wallet: [`0x04cbf622…ea13`](https://sepolia.etherscan.io/tx/0x04cbf622f117f1f57e05e9991fb31740afb8c80d57f9c5295958d434eaf8ea13).
+- `.github/workflows/keep-warm.yml` pings the proxy status endpoint and the runner every 10 minutes until 2026-10-03.
 
-## Frontend state
+### Live checks
 
-T15 is complete in the repository.
+| Check                                                                          | Result                                                                             |
+| ------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
+| `POST /api/v1/proof/run` through the proxy                                     | 403                                                                                |
+| Same request with a visitor-supplied `x-kanon-company-token` header            | 403 (header stripped)                                                              |
+| Unknown path through the proxy                                                 | 403                                                                                |
+| API organization route with no token                                           | 401                                                                                |
+| Demo terms with a foreign recipient, or 5000 wei                               | 422 `DEMO_TERMS_OUT_OF_BOUNDS`                                                     |
+| `GET /api/v1/status`                                                           | 200, runner `ok`                                                                   |
+| `pnpm smoke:live` run 1                                                        | passed all 12 steps ([evidence](evidence/3rd-web-hack/live-judge-flow-run-1.json)) |
+| `pnpm smoke:live` run 2, started from the revoked fixture with no manual reset | passed all 12 steps ([evidence](evidence/3rd-web-hack/live-judge-flow-run-2.json)) |
 
-- The special landing page, exact approved logo, and six approved screens are implemented in `apps/web`.
-- The frontend uses the approved Field / Structure / Signal system, responsive behavior, accessible native controls, and reduced-motion behavior.
-- The client uses `/api` by default. The local Vite development proxy attaches `KANON_COMPANY_API_TOKEN` server-side and never sends it to browser code.
-- The current local `.env.local` does not contain `KANON_COMPANY_API_TOKEN`, so local mutation calls fail closed until that variable is configured. Render holds the backend token server-side.
-- The live lifecycle proof used installation `installation-release-web-live-20260914-f`. Initial approval and reauthorization returned HTTP `202`, activation reached generations 0 and 1, the update was `EXPANDED` with human review required, and revoke confirmed Privy authority removal, ENS `revoked`, and failed post-revoke delegated execution.
-- Evidence: [frontend lifecycle proof](evidence/frontend/t15-live-latest.json).
-- The frontend is live at `https://kanon-agents.vercel.app` through Vercel project `kanon-agents` (`prj_N24mPu3Av0eWyqqekzxzHtsNYbOr`). The current production deployment is `dpl_DUmPjGX6VWegUm58YqoxiUwAyW8c` and is ready.
-- The Vercel production environment contains `KANON_COMPANY_API_TOKEN` as a sensitive server-side variable. No secret value is recorded here or in the repository.
-- Chrome verification passed on the live default alias: the landing page loaded, the workspace showed `API connected`, the organization and ENS namespace read back, the Add an agent screen rendered, deep `/api/v1/*` routes reached Render, and three full browser rehearsals ended in `REVOKED` generation 2.
-- The requested alias `kanon.agents.vercel.app` could not be assigned. Vercel returned that `*.agents.vercel.app` subdomains are reserved for another account. No alias mutation was made for that hostname.
+Both runs produced a confirmed allowed Sepolia transaction, a `PRIVY_POLICY_REJECTED_400` forbidden rejection, an `EXPANDED` update requiring human review, reauthorization to generation 1, revocation at generation 2 with Privy authority removed and ENS status `revoked`, and a post-revoke attempt refused with `RUNNER_REFUSED_STALE_OR_REVOKED`.
 
-## Vercel deployment boundary
+## Operating notes
 
-The local Vite proxy is not the production path. The production Vercel function at `api/kanon-proxy.ts`, reached through the explicit routes in `vercel.json`, forwards `/api/*` to Render and attaches `KANON_COMPANY_API_TOKEN` server-side. A static Vercel rewrite directly to Render would omit the company token and make company-authenticated mutations fail closed. Putting `KANON_COMPANY_API_TOKEN` in a `VITE_` variable would expose a secret to the browser and is forbidden.
+- Render free services sleep after about 15 minutes idle. The frontend retries automatically and the keep-warm workflow reduces cold starts.
+- Only one session can hold the shared signer and ENS name. Idle sessions expire after 20 minutes (`KANON_DEMO_LEASE_TTL_SECONDS` overrides this).
+- The operator lifecycle proof (`POST /v1/proof/run`, company token only) now writes its own ENS baseline after Privy authority is attached, so it no longer needs a manual fixture reset.
+- Keep all ENS writes inside the Sepolia namespace above. No mainnet write is authorized.
 
-The production frontend needs:
+## Original build deployment
 
-1. A Vercel project linked to this repository and scoped to `apps/web`.
-2. A server-side `/api` proxy or Vercel function that forwards requests to `https://kanon-api.onrender.com` and attaches `KANON_COMPANY_API_TOKEN` from Vercel server-side environment state.
-3. Public frontend configuration only, such as the Render API origin. No Privy, ENS, owner, signer, or company-token secret belongs in browser environment variables.
-4. A production smoke test for health, organization readback, the six screens, asynchronous approval polling, update reauthorization, and revoke.
-
-## T17 complete
-
-- Vercel project `kanon-agents` is live at `https://kanon-agents.vercel.app` with production deployment `dpl_DUmPjGX6VWegUm58YqoxiUwAyW8c`.
-- The requested `kanon.agents.vercel.app` alias was attempted once and rejected by Vercel as reserved for another account. No mutation was made for that hostname.
-- Production health returned HTTP `200` with API and database `ok`. Organization readback returned the Sepolia namespace `agents.kanon-ethonline-2026.eth`.
-- The production proxy passed the deep release publish route and the live browser mutation routes. The proxy keeps the company token server-side.
-- Browser rehearsals completed with installations `installation-release-t17-rehearsal-2`, `installation-release-t17-rehearsal-3`, and `installation-release-t17-rehearsal-4`. Each reached active generation 0, displayed exact human approval, classified the broader update as requiring reauthorization, reached active generation 1, and ended at revoked generation 2 with Privy authority removed, ENS revoked, and post-revoke execution rejected.
-- The live proof run `1fc70730-9172-4111-bdac-20cd6c04f146` passed T11 to T13 through the deployed API, runner, Neon, Privy, and ENSv2. It includes an allowed transaction receipt, forbidden policy rejection, blocked pre-reauthorization expansion, active generation 1, post-revoke rejection, signer count zero, and unauthorized ENS restore rejection.
-- Non-secret evidence is recorded in `evidence/deployment/t17-live-latest.json`.
-
-Do not make a mainnet ENS write. Keep Render as the backend authority plane and keep all sponsor credentials server-side.
-
-## Public consumption pass
-
-- The root README is now product-first and links only to the public deployment, submission brief, implementation status, deployment boundary, and security policy.
-- `docs/submission.md` provides the judge path, sponsor boundary, evidence links, claims boundary, and current repository state.
-- `docs/implementation-status.md` separates live, tested, blocked, and future work.
-- `.github/workflows/ci.yml` runs the pinned Node.js and pnpm install, typecheck, test, lint, format, and frontend build checks on `main` pushes and pull requests.
-- Relative links in the public documentation resolve locally, the tracked-file secret-pattern scan returned no real credential matches, and the live Vercel browser surface passed the landing, workspace, API connection, namespace readback, agent detail, reload, and console checks.
-- GitHub visibility is public. The repository includes the MIT License in `LICENSE`.
-
-## Evidence and checks
-
-- [T15 frontend lifecycle proof](evidence/frontend/t15-live-latest.json)
-- [T16 Render and Neon deployment proof](evidence/deployment/render-neon-latest.json)
-- [T17 live frontend deployment and rehearsal proof](evidence/deployment/t17-live-latest.json)
-- [T11 to T13 lifecycle proof](evidence/lifecycle/t11-t13-latest.json)
-- `pnpm install --frozen-lockfile` passed.
-- `pnpm typecheck` passed.
-- `pnpm test` passed, 9 files and 58 tests.
-- `pnpm lint` passed.
-- `pnpm format:check` passed.
-- `pnpm build:web` passed.
-- `git diff --check` passed.
+The API, runner, database and frontend were first deployed during ETHOnline 2026. Records from that build: [Render and Neon](evidence/deployment/render-neon-latest.json), [frontend rehearsals](evidence/deployment/t17-live-latest.json), [frontend lifecycle](evidence/frontend/t15-live-latest.json), [lifecycle proof](evidence/lifecycle/t11-t13-latest.json).

@@ -1,48 +1,101 @@
 # Kanon
 
-Kanon is a business agent-control runtime for company-deployed financial AI agents. It joins a company-controlled ENSv2 identity with versioned, policy-enforced wallet authority through Privy.
+Kanon is a business agent-control runtime for company-deployed financial AI agents. A human approves an exact wallet authority for a specific agent release. Privy enforces that authority on every transaction. ENSv2 publishes the agent's company-controlled identity and approved state. A software update that asks for more cannot inherit the old approval.
 
-The core promise is simple: an agent receives exactly the authority a human approves, and a software update cannot silently widen that authority.
+**Core promise:** an agent receives exactly the authority a human approved, and a software update cannot silently widen it.
 
-[Live demo](https://kanon-agents.vercel.app) · [Deployment record](DEPLOYMENT.md) · [Submission brief](docs/submission.md) · [Implementation status](docs/implementation-status.md) · [Security boundary](SECURITY.md)
+- Live prototype: [kanon-agents.vercel.app](https://kanon-agents.vercel.app) (Ethereum Sepolia testnet)
+- Judge brief: [docs/submission.md](docs/submission.md)
+- Architecture: [docs/architecture.md](docs/architecture.md)
+- Pitch deck: [docs/pitch/kanon-pitch-deck.pdf](docs/pitch/kanon-pitch-deck.pdf)
+- Security boundary: [SECURITY.md](SECURITY.md) · Status: [docs/implementation-status.md](docs/implementation-status.md) · Deployment: [DEPLOYMENT.md](DEPLOYMENT.md)
 
-## Problem
+This is the **3rd-Web-Hack release** (`v0.3.0`, release label `kanon-3rd-web-hack-2026.09`). See [Project history](#project-history) for where Kanon started and what changed in this release.
 
-Financial agents need enough wallet authority to act without a human signing every transaction. Broad wallet credentials create a second risk. A software update can also request more authority than the company approved for the original release.
+## The problem
 
-Kanon gives the company a durable identity and an enforceable authority boundary for each agent release. Human approval stays attached to the exact normalized authority, release, package, and manifest identity.
+Companies want agents to pay contractors, move treasury funds and run recurring payments. Today they choose between two bad options: give the agent a broad hot-wallet key, or have a human sign every transaction. There is also a quieter risk. Agents are software and ship updates. When version 2 asks for more spending power than version 1, most setups let it inherit the old access without anyone reviewing the change.
 
-## How it works
+Kanon's users are businesses and organizations running financial agents: crypto-native startups, DAOs, and teams paying contributors in crypto.
 
-1. An agent release declares the capabilities it requests. The declaration never grants authority.
-2. The company defines the operating terms that it is willing to grant.
-3. Kanon normalizes those terms and computes a deterministic `permissionHash`.
-4. A human approves the exact release and authority before activation.
-5. Privy controls a delegated signer with the verified policy for the selected execution method.
-6. ENSv2 records the company-controlled agent identity and approved public state under the Sepolia organization namespace.
-7. Allowed actions execute through the delegated path. Forbidden actions are rejected by the policy path.
-8. A broader, substituted, or unknown release waits for explicit reauthorization. Revocation removes delegated authority before the ENS status changes to `revoked`.
+## How Kanon solves it
 
-## Load-bearing integrations
+1. **The release declares.** An agent release lists the capabilities it wants. The declaration never grants authority.
+2. **The company defines.** The company sets the terms it will grant: recipient, per-action ceiling, rolling spend ceiling.
+3. **Kanon normalizes.** Terms become a canonical record with a deterministic `permissionHash`.
+4. **A human approves.** The decision is bound to the release, package hash, manifest hash and `permissionHash`.
+5. **Privy enforces.** Kanon compiles the terms into a signer-specific Privy policy and attaches a dedicated delegated signer. The company keeps wallet ownership.
+6. **ENSv2 identifies.** The agent's ENS name under the company namespace records `kanon.agentId`, `kanon.release`, `kanon.permissionHash` and `kanon.status`. Only the company writer role can change them.
+7. **The agent operates.** The isolated runner executes allowed actions. Out-of-policy actions are rejected by Privy.
+8. **Updates are diffed.** A new release is classified `NO_CHANGE`, `NARROWER`, `EXPANDED`, `SUBSTITUTED` or `UNKNOWN`. Anything not provably equal or narrower waits for a fresh human decision. Privy is updated first; ENS moves only after Privy confirms.
+9. **Revocation is real.** The delegated signer is removed, ENS status becomes `revoked`, and later execution fails.
 
-Privy is the financial enforcement plane. The business wallet remains owner-controlled. The agent receives a separate signer and a signer-specific policy. Stateless restrictions are supported on `eth_sendTransaction`. Rolling native-value limits use the verified `eth_signTransaction` path with a Privy aggregation, then broadcast the signed transaction separately.
+Humans approve authority boundaries. Agents operate inside them.
 
-ENSv2 is the company-controlled identity and namespace plane. The ETHOnline proof uses the Sepolia hierarchy `kanon-ethonline-2026.eth`, `agents.kanon-ethonline-2026.eth`, and `representative-agent.agents.kanon-ethonline-2026.eth`. Protected records expose `kanon.agentId`, `kanon.release`, `kanon.permissionHash`, and `kanon.status`. ENSv2 records identity and approved public state. Privy enforces financial authority.
+## Try the judge flow
 
-## Verified scope
+Open [kanon-agents.vercel.app](https://kanon-agents.vercel.app), choose **Enter the workspace** and follow the judge path rail. Every step uses the deployed API, the isolated runner, Privy and ENSv2 on Sepolia:
 
-The live proof is testnet-only and uses Ethereum Sepolia, chain ID `11155111`.
+| #   | Step                                     | What you see                                       |
+| --- | ---------------------------------------- | -------------------------------------------------- |
+| 1   | Register an agent release                | Release, package hash, manifest hash               |
+| 2   | Review requested capabilities            | The request, kept separate from any grant          |
+| 3   | Define company authority                 | Recipient, per-action ceiling, rolling ceiling     |
+| 4   | Approve the exact boundary               | Normalized terms and `permissionHash`              |
+| 5   | Activate Privy-enforced authority        | Policy and delegated signer attached, generation 0 |
+| 6   | Inspect ENS identity and permission hash | Live records from the Permissioned Resolver        |
+| 7   | Run an allowed action                    | A Sepolia transaction with an Etherscan link       |
+| 8   | Reject a forbidden action                | Privy policy rejection recorded as evidence        |
+| 9   | Detect a broader release                 | `EXPANDED` diff with changed paths                 |
+| 10  | Require fresh human authorization        | New approval, generation 1                         |
+| 11  | Revoke authority                         | Signer removed, ENS status `revoked`               |
+| 12  | Prove post-revocation execution fails    | Rejected attempt recorded as evidence              |
 
-- The deployed frontend is live at [kanon-agents.vercel.app](https://kanon-agents.vercel.app).
-- The live browser rehearsals completed create, company terms, human approval, Privy and ENS binding, allowed execution, forbidden rejection, update reauthorization, and revoke.
-- The deployed T11 to T13 proof passed allowed execution, forbidden policy rejection, blocked pre-reauthorization expansion, Privy-first update ordering, signer removal, ENS revoked state, post-revoke failure, and unauthorized ENS restore rejection.
-- Non-secret evidence is recorded in [evidence/deployment/t17-live-latest.json](evidence/deployment/t17-live-latest.json), [evidence/lifecycle/t11-t13-latest.json](evidence/lifecycle/t11-t13-latest.json), and [evidence/ens/t6-write-latest.json](evidence/ens/t6-write-latest.json).
+Notes for the hosted demo:
 
-The requested `kanon.agents.vercel.app` hostname is reserved for another Vercel account. The verified default alias is the live entry point.
+- It shares one Privy demo wallet, one delegated signer and one ENS name. One session holds them at a time. If someone else is mid-run, the workspace shows when the fixture frees up (sessions expire after 20 minutes of inactivity through the real revocation path).
+- Terms are capped for the public demo: the recipient is the organization's own control wallet and values are at most 1000 wei. Those caps are enforced by the API.
+- The backend runs on free-tier hosting. If it was idle, the workspace shows "Waking hosted backend" and retries automatically; the first request can take up to a minute.
 
-## Clean checkout
+The same flow can be run headlessly against the public deployment with `pnpm smoke:live`. It needs no credentials and writes a non-secret record to `evidence/3rd-web-hack/`.
 
-Requirements: Node.js `22.23.2` and pnpm `11.5.0`.
+## Architecture
+
+```text
+Browser (Vercel, React)
+   │  /api/*  — no secrets in the browser
+   ▼
+Vercel proxy ── restricted demo credential, route allowlist, body cap
+   │
+   ▼
+Kanon API (Render, Node.js 22) ── Neon PostgreSQL
+   │  lifecycle state machine, human decisions, permission diff,
+   │  Privy policy compiler, ENS writes, session lease
+   ├──────────────► Privy: business wallet (company-owned), policy, delegated signer
+   ├──────────────► ENSv2 Sepolia: company namespace, agent name, protected records
+   ▼
+Isolated runner (Render) ── holds only the agent's delegated key, re-checks
+                            installation state before every execution
+```
+
+Full description, trust boundaries and lifecycle states: [docs/architecture.md](docs/architecture.md).
+
+## Technology stack
+
+| Layer                 | Technology                                                                                                                                            |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Network               | Ethereum Sepolia (chain ID `11155111`)                                                                                                                |
+| Financial enforcement | Privy server wallets, key quorum ownership, additional signers, signer-specific policies, rolling-value aggregations (`eth_signTransaction`)          |
+| Identity              | ENSv2 beta on Sepolia: Permissioned Registry, nested user registry, Permissioned Resolver, Enhanced Access Control roles, Universal Resolver readback |
+| EVM tooling           | viem                                                                                                                                                  |
+| Backend               | Node.js 22, TypeScript, `tsx`, PostgreSQL (Neon) via `pg`                                                                                             |
+| Frontend              | React 19, Vite 7                                                                                                                                      |
+| Hosting               | Vercel (frontend + proxy function), Render (API and runner)                                                                                           |
+| Quality               | Vitest, ESLint, Prettier, GitHub Actions CI                                                                                                           |
+
+## Setup
+
+Requirements: Node.js `22.x` (pinned `22.23.2` in `.node-version`) and pnpm `11.5.0`.
 
 ```text
 pnpm install --frozen-lockfile
@@ -53,31 +106,71 @@ pnpm format:check
 pnpm build:web
 ```
 
-These commands run without sponsor credentials. Copy variable names from [.env.example](.env.example) only into an ignored local secret source when running provider-backed probes or a locally authenticated deployment. Never put private keys, provider secrets, or the company API token in browser variables, source control, logs, or public evidence.
+None of these need provider credentials.
 
-The hosted demo is the simplest way to inspect the product. A local frontend can be started with `pnpm dev:web`, but company-authenticated mutations require an authorized backend environment and are intentionally unavailable from a clean checkout without those credentials.
+**Run the frontend locally against your own backend:** `pnpm dev:web`. The Vite dev server proxies `/api` to the backend and attaches a token server-side. Company-authenticated mutations need a backend you control.
+
+**Run your own backend:** copy the variable names from [.env.example](.env.example) into an ignored secret store. You need a Privy app with a business wallet owned by a key quorum, a separate agent signer key, a Sepolia RPC, an ENSv2 Sepolia namespace you control with the Kanon writer roles configured (see `apps/runner/src/ens-t6-write-probe.ts`), a PostgreSQL database, and two random tokens (`KANON_COMPANY_API_TOKEN` for the operator, `KANON_DEMO_API_TOKEN` for the public demo role). Start the services with:
+
+```text
+node --import tsx apps/api/src/server.ts
+node --import tsx apps/runner/src/server.ts
+```
+
+Never put private keys, provider secrets, the company token or the demo token in browser (`VITE_`) variables, source control, logs or evidence files.
+
+## Security boundary
+
+- The company owns the Privy wallet through a key quorum. The runner holds only the agent's delegated signer key and never falls back to owner signing.
+- Privy policy evaluation is the financial enforcement boundary. Kanon's own checks are defense in depth.
+- If a term cannot be enforced by the selected Privy execution method, the compiler refuses to emit a policy.
+- ENS records describe approved state; they never enforce wallet permissions. They are written only after the matching Privy change succeeds.
+- The public proxy never forwards the company API token. Visitor requests carry a restricted demo credential that the API limits to the guided flow, capped terms and rate limits. Operator routes such as the full lifecycle proof are refused.
+
+Details and reporting instructions: [SECURITY.md](SECURITY.md).
 
 ## Current limitations
 
-- The ENS identity and all recorded writes are on the authorized Sepolia namespace. No mainnet ENS write was made.
-- The prototype has not been audited for production custody or financial operations.
-- Privy aggregation behavior is method-dependent, and the documented stateful-policy concurrency caveat remains.
-- Request-count limits, token assets, arbitrary conditions, and unsupported policy combinations fail closed.
-- The Render free services can sleep after idle. Warm the API and runner before a live demo.
-- A future proof run needs an explicit owner-authorized reset of the shared Sepolia fixture after a revoke proof.
-- The repository is public under the [MIT License](LICENSE). The current proof remains Sepolia-only and is not a production custody deployment.
+- Sepolia testnet only. No mainnet deployment and no real funds.
+- Not independently audited. Not a production custody or financial-operations system. No external users.
+- The authority grammar is intentionally narrow: native ETH, one exact recipient, per-action and rolling value ceilings, optional calldata and validity constraints. ERC-20 assets and request-count limits fail closed.
+- Privy aggregations are method-dependent and carry Privy's documented stateful-policy concurrency caveat.
+- The hosted demo shares one wallet, signer and ENS name, so only one session can hold authority at a time.
+- ENSv2 contracts on Sepolia are beta and may change before mainnet.
+- The ENS namespace `kanon-ethonline-2026.eth` was registered during the original build and is reused unchanged so the verified records and permissions stay valid.
+- Render free services sleep when idle. A scheduled workflow keeps them warm until 2026-10-03.
+
+## Project history
+
+Kanon was designed and first built during ETHOnline 2026 (September 2026), starting from documentation only. That build produced the permission engine, Privy compiler, ENSv2 identity adapter, lifecycle API, runner and frontend. Git history shows that work unchanged.
+
+The 3rd-Web-Hack release (September 25 to 27, 2026) is the work that made Kanon a dependable, repeatable prototype for public judging:
+
+- Fixed the workspace sticking on "API pending" with timed retries, a visible wake-up state and faster service start-up, plus a keep-warm workflow.
+- Removed the company API token from the public proxy. Added a restricted demo role, a demo terms ceiling, rate limits and a proxy route allowlist.
+- Added a session lease so abandoned sessions expire through the real revocation path. The flow now repeats without manually resetting the shared ENS fixture, and the operator proof writes its own ENS baseline after Privy authority is attached.
+- Added allowed, forbidden and post-revocation execution to the UI with on-chain evidence, a twelve-step judge path, a live ENS record panel and a reject-update path.
+- Added `pnpm smoke:live` and new tests for the demo guard, lease, proxy and new lifecycle transitions.
+
+Records from the original build live in `evidence/` (for example `evidence/lifecycle/t11-t13-latest.json`). New release evidence lives in `evidence/3rd-web-hack/`.
 
 ## Repository map
 
 ```text
-apps/web/       approved frontend and server-side development proxy
-apps/api/       company-authenticated lifecycle API
-apps/runner/    isolated delegated runner and live proof probes
-packages/       manifest, permission, Privy, ENSv2, and shared contracts
-evidence/       selected non-secret proof records
-docs/           public submission and implementation-status records
-tests/          domain, policy, lifecycle, API-contract, and tooling tests
-LICENSE         MIT license for reuse of the repository
+apps/web/            React frontend (workspace, judge path, evidence views)
+api/kanon-proxy.ts   Vercel function: public proxy with demo credential and allowlist
+apps/api/            lifecycle API, demo guard, session lease
+apps/runner/         isolated delegated runner, live probes, smoke:live flow
+packages/manifest/   release and manifest hashing
+packages/permissions/ normalization, permissionHash, diff classification
+packages/privy/      method-aware Privy policy compiler and adapter
+packages/ens/        ENSv2 identity binding and protected record writes
+packages/shared/     installation state machine, API contracts, database
+tests/               Vitest suites
+evidence/            non-secret proof records
+docs/                judge brief, architecture, status, pitch deck, Devpost copy
 ```
 
-The repository is a hackathon and testnet proof. Treat the security boundary and current implementation status as authoritative for the claims that can be made from this checkout.
+## License
+
+[MIT](LICENSE)

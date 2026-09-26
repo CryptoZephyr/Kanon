@@ -16,6 +16,19 @@ T14 through T16 keep the backend/API and frontend inside the same boundary. Vers
 
 No secret, authorization key, seed phrase, or owner credential belongs in source control, frontend responses, logs, analytics, or ordinary database fields.
 
+## Public demo boundary
+
+The hosted demo at `https://kanon-agents.vercel.app` is reachable by anyone, so the 3rd-Web-Hack release treats its visitors as untrusted:
+
+- The Vercel proxy never forwards `KANON_COMPANY_API_TOKEN`; that token is not configured on Vercel. The proxy sends a separate `KANON_DEMO_API_TOKEN` and strips any token headers a visitor supplies.
+- The API maps the demo token to a restricted role. It may read, publish releases, define terms, approve, reauthorize, reject an update, revoke, and run the two fixed execution scenarios. It cannot start the operator lifecycle proof or reach any other route.
+- Demo terms must stay inside a ceiling: one rule, Sepolia, native ETH, recipient equal to the organization's own control wallet, per-action and rolling ceilings of 1 to 1000 wei, and a rolling window of 60 to 86400 seconds. Out-of-bounds terms return `DEMO_TERMS_OUT_OF_BOUNDS`.
+- Execution targets are chosen by the API, not the caller: `ALLOWED` sends 1 wei to the approved recipient, `FORBIDDEN` sends 1 wei to a fixed address outside the policy.
+- Mutations and executions are rate-limited per client and globally.
+- A session lease lets one session hold the shared delegated signer and ENS name. Idle sessions expire after 20 minutes through the normal revocation path, recorded as `demo-operator-session-expiry-policy`. A stale record that cannot be revoked normally is retired only after Privy reports zero delegated signers.
+
+These are demo cost and abuse controls. They do not replace Privy enforcement, which still decides whether each transaction is allowed.
+
 ## Reporting a vulnerability
 
 Do not open a public issue for a suspected security problem. Use the repository owner's GitHub profile to request a private report or use GitHub's private vulnerability reporting when it is enabled for the repository. Include only the minimum reproduction details needed to triage the issue. Never include private keys, seed phrases, provider secrets, authorization keys, or company tokens in a report.
@@ -28,4 +41,4 @@ Out of scope are third-party Privy or ENS infrastructure, the security of the us
 
 ## Prototype limits
 
-Kanon is a hackathon and Ethereum Sepolia testnet proof. It has not received an independent security audit and is not a production custody or financial-operations deployment. ENSv2 beta interfaces, Privy policy behavior, free-tier hosting, provider availability, and testnet state can change. No mainnet ENS write is authorized by this repository.
+Kanon is a hackathon prototype running on the Ethereum Sepolia testnet. It has not received an independent security audit and is not a production custody or financial-operations deployment. ENSv2 beta interfaces, Privy policy behavior, free-tier hosting, provider availability, and testnet state can change. No mainnet ENS write is authorized by this repository.

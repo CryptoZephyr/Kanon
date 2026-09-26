@@ -271,3 +271,66 @@ describe("authority_retired transition", () => {
     expect(resource.retirement?.ensRevokedWritten).toBe(false);
   });
 });
+
+describe("recordedAuthority projection", () => {
+  it("exposes stored Privy and ENS bindings for a revoked installation", () => {
+    const { installation } = createActiveFixture();
+    const retired = transitionInstallation(installation, {
+      type: "authority_retired",
+      retirement: retirement({ ensRevokedWritten: true }),
+    });
+    const resource = createInstallationResource({ installation: retired });
+
+    expect(resource.activeAuthority).toBeUndefined();
+    const recorded = resource.recordedAuthority;
+    expect(recorded?.privy?.walletId).toBe("fixture-business-wallet");
+    expect(recorded?.privy?.policyId).toBe("fixture-agent-policy");
+    expect(recorded?.privy?.status).toBe("REVOKED");
+    expect(recorded?.privy && "permissionHash" in recorded.privy).toBe(false);
+    expect(recorded?.privy && "aggregationId" in recorded.privy).toBe(false);
+    expect(recorded?.ens?.source).toBe("recorded");
+    expect(recorded?.ens?.agentName).toBe(
+      "representative-agent.agents.kanon-ethonline-2026.eth",
+    );
+    expect(recorded?.ens?.records["kanon.release"]).toBe(
+      installation.release.releaseId,
+    );
+    expect(recorded?.ens?.records["kanon.status"]).toBe("revoked");
+  });
+
+  it("uses live on-chain records when a readback is supplied", () => {
+    const { installation } = createActiveFixture();
+    const retired = transitionInstallation(installation, {
+      type: "authority_retired",
+      retirement: retirement(),
+    });
+    const resource = createInstallationResource({
+      installation: retired,
+      recordedEnsRead: {
+        binding: installation.ens!.binding,
+        resolver: installation.ens!.binding.resolver,
+        records: {
+          "kanon.agentId": "com.example.treasury",
+          "kanon.release": "release-later-session",
+          "kanon.permissionHash": "sha256:" + "ab".repeat(32),
+          "kanon.status": "active",
+        },
+      },
+    });
+
+    expect(resource.recordedAuthority?.ens?.source).toBe("live");
+    expect(resource.recordedAuthority?.ens?.records["kanon.release"]).toBe(
+      "release-later-session",
+    );
+    expect(resource.recordedAuthority?.ens?.status).toBe("active");
+  });
+
+  it("omits the projection for installations that never held authority", () => {
+    const awaiting = transitionInstallation(
+      freshInstallation("installation-no-auth", "release-no-auth"),
+      { type: "approval_requested" },
+    );
+    const resource = createInstallationResource({ installation: awaiting });
+    expect(resource.recordedAuthority).toBeUndefined();
+  });
+});

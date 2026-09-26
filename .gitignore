@@ -19,7 +19,7 @@ coverage/
 
 # Internal project planning and canonical private handoff records
 AI_TOOLING.md
-Architecture.md
+/Architecture.md
 Build.md
 DEMO.md
 FRONTEND.md

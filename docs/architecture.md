@@ -34,17 +34,17 @@ Kanon separates four things that are usually mixed together: wallet ownership, d
                  └────────────────┘
 ```
 
-| Component | Path | Responsibility |
-| --------- | ---- | -------------- |
-| Manifest | `packages/manifest` | Parses a release, canonicalizes it, derives `packageHash` and `manifestHash`. Never grants authority. |
-| Permissions | `packages/permissions` | Normalizes company terms, computes `permissionHash`, classifies release changes. |
-| Privy adapter | `packages/privy` | Compiles normalized terms into a Privy policy for one explicit execution method, manages aggregations, attaches and removes the delegated signer. |
-| ENS adapter | `packages/ens` | Binds the agent name, writes and reads the four protected records, refuses writes that would overstate authority. |
-| Shared | `packages/shared` | Installation state machine, human decisions, evidence types, versioned API contracts, database access. |
-| API | `apps/api` | HTTP lifecycle, role checks, demo guard, session lease, asynchronous authority configuration. |
-| Runner | `apps/runner` | Delegated execution only; refuses stale, revoked or mismatched authority. |
-| Web | `apps/web` | Judge-facing workspace. |
-| Proxy | `api/kanon-proxy.ts` | Public entry point; adds the restricted demo credential and enforces a route allowlist. |
+| Component     | Path                   | Responsibility                                                                                                                                    |
+| ------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Manifest      | `packages/manifest`    | Parses a release, canonicalizes it, derives `packageHash` and `manifestHash`. Never grants authority.                                             |
+| Permissions   | `packages/permissions` | Normalizes company terms, computes `permissionHash`, classifies release changes.                                                                  |
+| Privy adapter | `packages/privy`       | Compiles normalized terms into a Privy policy for one explicit execution method, manages aggregations, attaches and removes the delegated signer. |
+| ENS adapter   | `packages/ens`         | Binds the agent name, writes and reads the four protected records, refuses writes that would overstate authority.                                 |
+| Shared        | `packages/shared`      | Installation state machine, human decisions, evidence types, versioned API contracts, database access.                                            |
+| API           | `apps/api`             | HTTP lifecycle, role checks, demo guard, session lease, asynchronous authority configuration.                                                     |
+| Runner        | `apps/runner`          | Delegated execution only; refuses stale, revoked or mismatched authority.                                                                         |
+| Web           | `apps/web`             | Judge-facing workspace.                                                                                                                           |
+| Proxy         | `api/kanon-proxy.ts`   | Public entry point; adds the restricted demo credential and enforces a route allowlist.                                                           |
 
 ## Authority lifecycle
 
@@ -67,13 +67,13 @@ The Privy compiler emits one execution method per plan. Stateless rules can use 
 
 ## Trust boundaries
 
-| Holder | Has | Never has |
-| ------ | --- | --------- |
-| Browser | Public resources and the demo UI | Any provider secret, the company token or the demo token |
-| Vercel proxy | Demo token | Company token, Privy or ENS keys |
-| API | Company token check, Privy owner credential, ENS writer key, runner shared secret | Agent signer key |
-| Runner | Agent signer key, runner shared secret | Owner credential, ENS writer key |
-| ENS agent owner address | Name ownership under the company registry | Writer role on the protected records |
+| Holder                  | Has                                                                               | Never has                                                |
+| ----------------------- | --------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| Browser                 | Public resources and the demo UI                                                  | Any provider secret, the company token or the demo token |
+| Vercel proxy            | Demo token                                                                        | Company token, Privy or ENS keys                         |
+| API                     | Company token check, Privy owner credential, ENS writer key, runner shared secret | Agent signer key                                         |
+| Runner                  | Agent signer key, runner shared secret                                            | Owner credential, ENS writer key                         |
+| ENS agent owner address | Name ownership under the company registry                                         | Writer role on the protected records                     |
 
 ## Public demo boundary (3rd-Web-Hack release)
 
@@ -88,12 +88,12 @@ The hosted demo is open to anyone, so it is treated as an untrusted client:
 
 ## Deployment
 
-| Piece | Where |
-| ----- | ----- |
-| Frontend and proxy | Vercel project `kanon-agents`, [kanon-agents.vercel.app](https://kanon-agents.vercel.app) |
-| API | Render `kanon-api`, [kanon-api.onrender.com](https://kanon-api.onrender.com/healthz) |
-| Runner | Render `kanon-runner`, [kanon-runner.onrender.com](https://kanon-runner.onrender.com/healthz) |
-| Database | Neon PostgreSQL |
-| Chain | Ethereum Sepolia |
+| Piece              | Where                                                                                         |
+| ------------------ | --------------------------------------------------------------------------------------------- |
+| Frontend and proxy | Vercel project `kanon-agents`, [kanon-agents.vercel.app](https://kanon-agents.vercel.app)     |
+| API                | Render `kanon-api`, [kanon-api.onrender.com](https://kanon-api.onrender.com/healthz)          |
+| Runner             | Render `kanon-runner`, [kanon-runner.onrender.com](https://kanon-runner.onrender.com/healthz) |
+| Database           | Neon PostgreSQL                                                                               |
+| Chain              | Ethereum Sepolia                                                                              |
 
 See [DEPLOYMENT.md](../DEPLOYMENT.md) for the current deployment record.

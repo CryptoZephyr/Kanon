@@ -342,15 +342,26 @@ function JudgeRail({
   );
 }
 
+type NextStepCommand = NonNullable<NonNullable<NextStep["action"]>["command"]>;
+
 function NextStepPanel({
   step,
   readOnly,
   onNavigate,
+  onCommand,
+  busy = false,
 }: {
   readonly step: NextStep;
   readonly readOnly: boolean;
   readonly onNavigate: (screen: Screen) => void;
+  readonly onCommand?: (command: NextStepCommand) => boolean;
+  readonly busy?: boolean;
 }) {
+  const act = () => {
+    const action = step.action!;
+    if (action.command && onCommand?.(action.command)) return;
+    onNavigate(action.screen);
+  };
   return (
     <section className="next-step" aria-live="polite">
       <div className="next-step-body">
@@ -359,7 +370,7 @@ function NextStepPanel({
         <p>{step.detail}</p>
       </div>
       {step.action && !readOnly && (
-        <Button onClick={() => onNavigate(step.action!.screen)}>
+        <Button onClick={act} disabled={busy}>
           {step.action.label}
         </Button>
       )}
@@ -1310,6 +1321,15 @@ function AgentDetail({
 }) {
   const installation = workspace.installation;
   const [confirmingRevoke, setConfirmingRevoke] = useState(false);
+  const confirmRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (confirmingRevoke) {
+      confirmRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }
+  }, [confirmingRevoke]);
   const agent = installation?.agent ?? workspace.agent;
   const terms = installation?.companyTerms.companyTerms.authority.rules[0];
   const status = installation?.status ?? "VALIDATED";
@@ -1346,7 +1366,27 @@ function AgentDetail({
         </div>
         <StatusText status={status} />
       </div>
-      <NextStepPanel step={step} readOnly={readOnly} onNavigate={onNavigate} />
+      <NextStepPanel
+        step={step}
+        readOnly={readOnly}
+        onNavigate={onNavigate}
+        busy={executing !== undefined || loading}
+        onCommand={(command) => {
+          if (command === "execute-allowed" || command === "post-revoke") {
+            onExecute("ALLOWED");
+            return true;
+          }
+          if (command === "execute-forbidden") {
+            onExecute("FORBIDDEN");
+            return true;
+          }
+          if (command === "revoke") {
+            setConfirmingRevoke(true);
+            return true;
+          }
+          return false;
+        }}
+      />
       {pending && <WatchPanel pending={pending} />}
       {(status === "CONFIGURING_AUTHORITY" ||
         status === "AWAITING_REAUTHORIZATION" ||
@@ -1688,7 +1728,7 @@ function AgentDetail({
             {!readOnly &&
               status === "ACTIVE" &&
               (confirmingRevoke ? (
-                <div className="confirm-block">
+                <div className="confirm-block" ref={confirmRef}>
                   <p>
                     <strong>Revoke is irreversible.</strong> The delegated
                     signer is removed from the Privy wallet, the ENS status

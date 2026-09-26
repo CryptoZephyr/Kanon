@@ -222,9 +222,10 @@ async function main() {
 
   await step("run the allowed action", async () => {
     await clickButton(page, "Run allowed action");
+    // Only an execution-evidence transaction link counts; the ENS resolver
+    // address link on the same page must not satisfy this check.
     await page
-      .getByRole("link", { name: /0x[0-9a-f]{4}/ })
-      .first()
+      .locator('a[href*="sepolia.etherscan.io/tx/"]')
       .first()
       .waitFor({ state: "visible", timeout: GENEROUS });
     await shot(page, "allowed-executed");

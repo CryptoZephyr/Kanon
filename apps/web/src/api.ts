@@ -294,6 +294,36 @@ function unwrap<T>(payload: unknown): T {
   return payload as T;
 }
 
+export const API_TIMEOUTS = {
+  /** Ordinary reads: lists, single resources, diffs. */
+  read: 45_000,
+  /** Publish release, define terms, reject update. */
+  mutation: 45_000,
+  /** Approval may expire a stale session through a full revoke first. */
+  approval: 150_000,
+  /** Revoke: signer removal + runner check + ENS write + receipt. */
+  revoke: 180_000,
+  /** Execution waits on Sepolia confirmation. */
+  execute: 115_000,
+  /** Health/status probes fail fast so the connect loop can retry. */
+  status: 20_000,
+} as const;
+
+export interface PollProgress {
+  readonly attempt: number;
+  readonly elapsedSeconds: number;
+}
+
+export interface WaitOptions {
+  /**
+   * Predicate over the latest installation. Polling stops when it returns
+   * true. Defaults to "no longer configuring or reauthorizing".
+   */
+  readonly until?: (installation: InstallationResource) => boolean;
+  readonly timeoutMs?: number;
+  readonly onProgress?: (progress: PollProgress) => void;
+}
+
 export class KanonApi {
   private readonly baseUrl: string;
 
@@ -306,7 +336,7 @@ export class KanonApi {
   private async request<T>(
     path: string,
     init: RequestInit = {},
-    timeoutMs = 20_000,
+    timeoutMs: number = API_TIMEOUTS.read,
   ): Promise<T> {
     const response = await fetch(`${this.baseUrl}${path}`, {
       ...init,
@@ -331,11 +361,11 @@ export class KanonApi {
   }
 
   public health(): Promise<Record<string, unknown>> {
-    return this.request("/healthz");
+    return this.request("/healthz", {}, API_TIMEOUTS.status);
   }
 
   public status(): Promise<StatusResource> {
-    return this.request("/v1/status");
+    return this.request("/v1/status", {}, API_TIMEOUTS.status);
   }
 
   public installations(
@@ -363,7 +393,7 @@ export class KanonApi {
           scenario,
         }),
       },
-      115_000,
+      API_TIMEOUTS.execute,
     );
   }
 
@@ -414,23 +444,63 @@ export class KanonApi {
     );
   }
 
+  /**
+   * Poll an installation until `until` returns true or the deadline passes.
+   * Transient poll failures (timeouts, network errors, 408/429/5xx) are
+   * retried with backoff — a slow poll must not kill the user's run while
+   * the server is still working. Definitive 4xx other than 404/408/429
+   * aborts immediately.
+   */
   public async waitForInstallation(
     organizationId: string,
     installationId: string,
-    initial: InstallationResource,
+    initial: InstallationResource | undefined,
+    options: WaitOptions = {},
   ): Promise<InstallationResource> {
+    const until =
+      options.until ??
+      ((installation: InstallationResource) =>
+        installation.status !== "CONFIGURING_AUTHORITY" &&
+        installation.status !== "AWAITING_REAUTHORIZATION");
+    const deadline = Date.now() + (options.timeoutMs ?? 300_000);
     let current = initial;
-    for (let attempt = 0; attempt < 90; attempt += 1) {
-      if (
-        current.status !== "CONFIGURING_AUTHORITY" &&
-        current.status !== "AWAITING_REAUTHORIZATION"
-      ) {
-        return current;
+    let attempt = 0;
+    while (Date.now() < deadline) {
+      if (current !== undefined && until(current)) return current;
+      const delay = Math.min(2_000 * 1.4 ** attempt, 8_000);
+      await new Promise((resolve) => setTimeout(resolve, delay));
+      attempt += 1;
+      options.onProgress?.({
+        attempt,
+        elapsedSeconds: Math.round(
+          (Date.now() - (deadline - (options.timeoutMs ?? 300_000))) / 1_000,
+        ),
+      });
+      try {
+        current = await this.installation(organizationId, installationId);
+      } catch (caught) {
+        if (this.isDefinitivePollError(caught)) throw caught;
       }
-      await new Promise((resolve) => setTimeout(resolve, 2_000));
-      current = await this.installation(organizationId, installationId);
+    }
+    if (current === undefined) {
+      throw new Error(
+        "The installation could not be loaded before the deadline.",
+      );
     }
     return current;
+  }
+
+  private isDefinitivePollError(error: unknown): boolean {
+    if (error instanceof KanonApiError) {
+      return (
+        error.status < 500 &&
+        error.status !== 404 &&
+        error.status !== 408 &&
+        error.status !== 429
+      );
+    }
+    // timeouts (DOMException) and network errors (TypeError) are transient
+    return false;
   }
 
   public publishRelease(
@@ -489,6 +559,7 @@ export class KanonApi {
           decision,
         }),
       },
+      API_TIMEOUTS.approval,
     );
   }
 
@@ -526,6 +597,7 @@ export class KanonApi {
           decision,
         }),
       },
+      API_TIMEOUTS.revoke,
     );
   }
 

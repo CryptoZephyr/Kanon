@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   KanonApi,
-  KanonApiError,
   type AgentResource,
   type CompanyRule,
   type InstallationResource,
@@ -10,6 +9,15 @@ import {
   type StatusResource,
   type WalletResource,
 } from "./api.js";
+import {
+  activationSubsteps,
+  describeApiError,
+  isTransientError,
+  nextStepFor,
+  postRevokeAttempted,
+  type DescribedError,
+  type NextStep,
+} from "./logic.js";
 
 type Screen =
   | "landing"
@@ -145,32 +153,8 @@ function formatStatus(status: string | undefined): string {
   return status ? status.toLowerCase().replaceAll("_", " ") : "not connected";
 }
 
-function getErrorMessage(error: unknown): string {
-  if (error instanceof KanonApiError) {
-    if (error.code === "NOT_FOUND")
-      return "This resource is not available in the deployed API yet.";
-    if (error.code === "UNAUTHORIZED")
-      return "The company session is not authorized for this action.";
-    if (error.code === "DEMO_SESSION_ACTIVE") {
-      const retrySeconds = Number(error.details?.retryAfterSeconds ?? "60");
-      const minutes = Math.max(1, Math.ceil(retrySeconds / 60));
-      return `Another demo session is live on the shared fixture. Try again in about ${minutes} minute${minutes === 1 ? "" : "s"}.`;
-    }
-    if (error.code === "RATE_LIMITED")
-      return "The hosted demo is rate limited right now. Try again shortly.";
-    if (error.code === "UPSTREAM_FAILED")
-      return "The execution runner could not be reached. Try again shortly.";
-    return error.message;
-  }
-  if (
-    error instanceof DOMException &&
-    (error.name === "TimeoutError" || error.name === "AbortError")
-  ) {
-    return "The request timed out. The hosted backend may still be waking up.";
-  }
-  return error instanceof Error
-    ? error.message
-    : "The request could not be completed.";
+function getErrorMessage(error: unknown): DescribedError {
+  return describeApiError(error);
 }
 
 function Logo({ compact = false }: { readonly compact?: boolean }) {
@@ -214,6 +198,7 @@ function MetaLabel({ children }: { readonly children: React.ReactNode }) {
 function judgeSteps(installation?: InstallationResource): {
   readonly label: string;
   readonly done: boolean;
+  readonly screen?: Screen;
 }[] {
   const evidence = installation?.evidence ?? [];
   const revocationIndex = evidence.findIndex(
@@ -256,64 +241,171 @@ function judgeSteps(installation?: InstallationResource): {
     {
       label: "Approve exact boundary",
       done: installation?.approval !== undefined,
+      screen: "review",
     },
     {
       label: "Privy authority active",
       done: installation?.activeAuthority !== undefined || reachedRevocation,
+      screen: "detail",
     },
     {
       label: "Inspect ENS identity + permissionHash",
       done:
         installation?.activeAuthority?.ens.verified === true ||
         reachedRevocation,
+      screen: "detail",
     },
     {
       label: "Allowed action succeeded",
       done: executions.some((entry) => entry.outcome === "SUCCEEDED"),
+      screen: "detail",
     },
     {
       label: "Forbidden action rejected",
       done: executionsBeforeRevoke.some(
         (entry) => entry.outcome === "REJECTED",
       ),
+      screen: "detail",
     },
-    { label: "Broader release detected (EXPANDED)", done: expandedDetected },
+    {
+      label: "Broader release detected (EXPANDED)",
+      done: expandedDetected,
+      screen: "update",
+    },
     {
       label: "Fresh human reauthorization (generation +1)",
       done: reauthorized,
+      screen: "review",
     },
-    { label: "Authority revoked", done: status === "REVOKED" },
+    {
+      label: "Authority revoked",
+      done: status === "REVOKED",
+      screen: "detail",
+    },
     {
       label: "Post-revoke execution failed",
       done:
         installation?.revoke?.postRevokeExecutionFailed === true ||
         executionsAfterRevoke.some((entry) => entry.outcome === "REJECTED"),
+      screen: "detail",
     },
   ];
 }
 
 function JudgeRail({
   installation,
+  onNavigate,
 }: {
   readonly installation?: InstallationResource;
+  readonly onNavigate?: (screen: Screen) => void;
 }) {
   const steps = judgeSteps(installation);
+  const nextIndex = steps.findIndex((step) => !step.done);
   return (
     <div className="judge-rail">
       <MetaLabel>Judge path</MetaLabel>
       <ol className="judge-steps">
-        {steps.map((step, index) => (
-          <li
-            key={step.label}
-            className={step.done ? "judge-step is-done" : "judge-step"}
-          >
-            <span className="judge-step-index">
-              {String(index + 1).padStart(2, "0")}
-            </span>
-            <span>{step.label}</span>
-          </li>
-        ))}
+        {steps.map((step, index) => {
+          const isNext = index === nextIndex;
+          const className = step.done
+            ? "judge-step is-done"
+            : isNext
+              ? "judge-step is-next"
+              : "judge-step";
+          const inner = (
+            <>
+              <span className="judge-step-index">
+                {step.done ? "✓" : String(index + 1).padStart(2, "0")}
+              </span>
+              <span>{step.label}</span>
+            </>
+          );
+          return (
+            <li key={step.label} className={className}>
+              {step.screen && onNavigate ? (
+                <button
+                  type="button"
+                  className="judge-step-link"
+                  onClick={() => onNavigate(step.screen!)}
+                >
+                  {inner}
+                </button>
+              ) : (
+                inner
+              )}
+            </li>
+          );
+        })}
       </ol>
+    </div>
+  );
+}
+
+function NextStepPanel({
+  step,
+  readOnly,
+  onNavigate,
+}: {
+  readonly step: NextStep;
+  readonly readOnly: boolean;
+  readonly onNavigate: (screen: Screen) => void;
+}) {
+  return (
+    <section className="next-step" aria-live="polite">
+      <div className="next-step-body">
+        <MetaLabel>Next step</MetaLabel>
+        <strong>{step.title}</strong>
+        <p>{step.detail}</p>
+      </div>
+      {step.action && !readOnly && (
+        <Button onClick={() => onNavigate(step.action!.screen)}>
+          {step.action.label}
+        </Button>
+      )}
+      {step.action && readOnly && (
+        <Button
+          kind="secondary"
+          onClick={() => onNavigate(step.action!.screen)}
+        >
+          {step.action.label}
+        </Button>
+      )}
+      {step.inProgress && <span className="status-mark is-live" />}
+    </section>
+  );
+}
+
+export interface PendingWatch {
+  readonly kind: "activation" | "reauthorization" | "revocation" | "execution";
+  readonly installationId: string;
+  readonly attempt: number;
+  readonly elapsedSeconds: number;
+}
+
+function watchKindLabel(kind: PendingWatch["kind"]): string {
+  switch (kind) {
+    case "activation":
+      return "activation";
+    case "reauthorization":
+      return "reauthorization";
+    case "revocation":
+      return "revocation";
+    case "execution":
+      return "execution";
+  }
+}
+
+function WatchPanel({ pending }: { readonly pending: PendingWatch }) {
+  return (
+    <div className="watch-panel" role="status" aria-live="polite">
+      <span className="status-mark is-live" />
+      <div>
+        <strong>Checking the {watchKindLabel(pending.kind)} result…</strong>
+        <span>
+          The browser request ended, but the server keeps working. Poll{" "}
+          {pending.attempt} · {pending.elapsedSeconds}s elapsed.
+        </span>
+      </div>
     </div>
   );
 }
@@ -351,6 +443,7 @@ function LandingPage({ onEnter }: { readonly onEnter: () => void }) {
         <nav className="landing-nav" aria-label="Primary">
           <a href="#thesis">Why Kanon</a>
           <a href="#control">Control surface</a>
+          <a href="/docs">Docs</a>
           <button className="text-link" onClick={onEnter}>
             Open workspace
           </button>
@@ -372,10 +465,23 @@ function LandingPage({ onEnter }: { readonly onEnter: () => void }) {
             policy, and a company-controlled ENS identity.
           </p>
           <div className="hero-actions">
-            <Button onClick={onEnter}>Enter the workspace</Button>
+            <Button onClick={onEnter}>Start a live authority run</Button>
             <a className="text-link text-link-large" href="#control">
               See the control surface <span aria-hidden="true">↘</span>
             </a>
+          </div>
+          <div className="hero-next">
+            <MetaLabel>What happens next</MetaLabel>
+            <ol className="hero-next-steps">
+              <li>Register a release</li>
+              <li>Approve exact authority</li>
+              <li>Run allowed and forbidden actions</li>
+              <li>Update, reauthorize, revoke</li>
+            </ol>
+            <p className="hero-facts">
+              Sepolia testnet · no wallet or sign-up needed · about 5 minutes ·
+              one run at a time
+            </p>
           </div>
         </div>
         <div
@@ -518,6 +624,9 @@ function AppShell({
           >
             Live authority
           </button>
+          <a className="nav-link" href="/docs">
+            Docs
+          </a>
         </nav>
         <div className="app-status">
           <span
@@ -573,9 +682,15 @@ function AppShell({
               {Math.max(1, Math.ceil(liveSession.expiresInSeconds / 60))} min
             </span>
           )}
+          {workspace.installationSource === "session" &&
+            workspace.installation && (
+              <span className="mono">YOUR RUN — SAVED IN THIS BROWSER</span>
+            )}
           {workspace.installationSource === "observe" &&
             workspace.installation && (
-              <span className="mono">LATEST RUN (OBSERVE)</span>
+              <span className="mono">
+                LATEST RUN — SOMEONE ELSE'S (READ ONLY)
+              </span>
             )}
         </div>
       )}
@@ -589,12 +704,22 @@ function AppShell({
 
 function Registry({
   workspace,
+  step,
+  liveSessionBusy,
+  loadFailed,
   onAdd,
   onOpen,
+  onNavigate,
+  onRetryLoad,
 }: {
   readonly workspace: Workspace;
+  readonly step: NextStep;
+  readonly liveSessionBusy: boolean;
+  readonly loadFailed: boolean;
   readonly onAdd: () => void;
   readonly onOpen: () => void;
+  readonly onNavigate: (screen: Screen) => void;
+  readonly onRetryLoad: () => void;
 }) {
   const agent = workspace.installation?.agent ?? workspace.agent;
   const status = workspace.installation?.status ?? "VALIDATED";
@@ -609,10 +734,16 @@ function Registry({
             that requires attention.
           </p>
         </div>
-        <Button onClick={onAdd}>
-          Add an agent <span aria-hidden="true">↗</span>
+        <Button onClick={onAdd} disabled={liveSessionBusy}>
+          {liveSessionBusy ? "Fixture in use" : "Start a run"}
+          <span aria-hidden="true"> ↗</span>
         </Button>
       </div>
+      <NextStepPanel
+        step={step}
+        readOnly={workspace.installationSource === "observe"}
+        onNavigate={onNavigate}
+      />
       <div className="registry-layout">
         <section className="registry-panel" aria-labelledby="registry-title">
           <div className="panel-caption">
@@ -664,9 +795,22 @@ function Registry({
           <div className="registry-empty-row">
             <span>Representative agent</span>
             <span className="mono">
-              {workspace.proof?.proof
-                ? "T11-T13 evidence available"
-                : "Awaiting first read"}
+              {loadFailed ? (
+                <span>
+                  Couldn't load runs —{" "}
+                  <button
+                    className="text-link"
+                    type="button"
+                    onClick={onRetryLoad}
+                  >
+                    Retry
+                  </button>
+                </span>
+              ) : workspace.proof?.proof ? (
+                "T11-T13 evidence available"
+              ) : (
+                "Awaiting first read"
+              )}
             </span>
           </div>
         </section>
@@ -691,7 +835,10 @@ function Registry({
             The registry shows the boundary before the detail view shows the
             proof.
           </div>
-          <JudgeRail installation={workspace.installation} />
+          <JudgeRail
+            installation={workspace.installation}
+            onNavigate={onNavigate}
+          />
         </aside>
       </div>
       <div className="screen-footnote">
@@ -718,7 +865,7 @@ function AddAgent({
   readonly onSubmit: (draft: DraftRelease) => void;
   readonly onBack: () => void;
   readonly loading: boolean;
-  readonly error?: string;
+  readonly error?: DescribedError;
 }) {
   const [agentId, setAgentId] = useState(REPRESENTATIVE_AGENT_ID);
   const [releaseId, setReleaseId] = useState(generateReleaseId);
@@ -830,7 +977,7 @@ function Authority({
   readonly onSubmit: (terms: CompanyRule[]) => void;
   readonly onBack: () => void;
   readonly loading: boolean;
-  readonly error?: string;
+  readonly error?: DescribedError;
 }) {
   const recipient = initialTerms[0]?.recipient ?? controlWallet;
   const [maxValueWei, setMaxValueWei] = useState(
@@ -968,6 +1115,8 @@ function ApprovalReview({
   terms,
   permissionHash,
   action,
+  installation,
+  pending,
   onApprove,
   onRejectUpdate,
   onBack,
@@ -978,11 +1127,13 @@ function ApprovalReview({
   readonly terms: readonly CompanyRule[];
   readonly permissionHash?: string;
   readonly action: "APPROVE" | "REAUTHORIZE";
+  readonly installation?: InstallationResource;
+  readonly pending?: PendingWatch;
   readonly onApprove: () => void;
   readonly onRejectUpdate?: () => void;
   readonly onBack: () => void;
   readonly loading: boolean;
-  readonly error?: string;
+  readonly error?: DescribedError;
 }) {
   const rule = terms[0];
   return (
@@ -1083,6 +1234,26 @@ function ApprovalReview({
           </div>
         </div>
       </div>
+      {loading && (
+        <div className="authority-summary">
+          <div className="panel-caption">
+            <span>Activating authority</span>
+            <span className="mono">
+              {pending
+                ? `POLL ${pending.attempt} · ${pending.elapsedSeconds}S`
+                : "USUALLY 30–60 S"}
+            </span>
+          </div>
+          {activationSubsteps(true, installation).map((sub) => (
+            <Rule key={sub.label}>
+              <span aria-hidden="true">
+                {sub.done ? "✓" : sub.active ? "…" : "·"}
+              </span>
+              <strong>{sub.label}</strong>
+            </Rule>
+          ))}
+        </div>
+      )}
       {error && <InlineError message={error} />}
       <div className="review-actions">
         <Button kind="secondary" onClick={onBack}>
@@ -1095,7 +1266,9 @@ function ApprovalReview({
         )}
         <Button onClick={onApprove} disabled={loading}>
           {loading
-            ? "Recording decision..."
+            ? pending
+              ? "Recording decision, then activating…"
+              : "Recording decision…"
             : action === "REAUTHORIZE"
               ? "Approve new authority"
               : "Approve exact authority"}
@@ -1108,23 +1281,34 @@ function ApprovalReview({
 function AgentDetail({
   workspace,
   executing,
+  step,
+  pending,
+  readOnly,
   onExecute,
   onUpdate,
   onRevoke,
   onBack,
+  onNavigate,
+  onStartNewRun,
   loading,
   error,
 }: {
   readonly workspace: Workspace;
   readonly executing?: "ALLOWED" | "FORBIDDEN";
+  readonly step: NextStep;
+  readonly pending?: PendingWatch;
+  readonly readOnly: boolean;
   readonly onExecute: (scenario: "ALLOWED" | "FORBIDDEN") => void;
   readonly onUpdate: () => void;
   readonly onRevoke: () => void;
   readonly onBack: () => void;
+  readonly onNavigate: (screen: Screen) => void;
+  readonly onStartNewRun: () => void;
   readonly loading: boolean;
-  readonly error?: string;
+  readonly error?: DescribedError;
 }) {
   const installation = workspace.installation;
+  const [confirmingRevoke, setConfirmingRevoke] = useState(false);
   const agent = installation?.agent ?? workspace.agent;
   const terms = installation?.companyTerms.companyTerms.authority.rules[0];
   const status = installation?.status ?? "VALIDATED";
@@ -1161,6 +1345,31 @@ function AgentDetail({
         </div>
         <StatusText status={status} />
       </div>
+      <NextStepPanel step={step} readOnly={readOnly} onNavigate={onNavigate} />
+      {pending && <WatchPanel pending={pending} />}
+      {(status === "CONFIGURING_AUTHORITY" ||
+        status === "AWAITING_REAUTHORIZATION" ||
+        status === "REVOKING") &&
+        !pending && (
+          <div className="authority-summary">
+            <div className="panel-caption">
+              <span>
+                {status === "REVOKING"
+                  ? "Revoking authority"
+                  : "Applying authority"}
+              </span>
+              <span className="mono">IN PROGRESS</span>
+            </div>
+            {activationSubsteps(true, installation).map((sub) => (
+              <Rule key={sub.label}>
+                <span aria-hidden="true">
+                  {sub.done ? "✓" : sub.active ? "…" : "·"}
+                </span>
+                <strong>{sub.label}</strong>
+              </Rule>
+            ))}
+          </div>
+        )}
       <div className="detail-layout">
         <section className="detail-main">
           <div className="detail-identity">
@@ -1366,15 +1575,93 @@ function AgentDetail({
               </Rule>
             </div>
           )}
+          {status === "REVOKED" &&
+            installation &&
+            postRevokeAttempted(installation) && (
+              <div className="authority-summary">
+                <div className="panel-caption">
+                  <span>Run complete — the proof</span>
+                  <span className="mono">
+                    GENERATION {installation.generation} · REVOKED
+                  </span>
+                </div>
+                <Rule>
+                  <span>Installation</span>
+                  <strong className="mono">{installation.id}</strong>
+                </Rule>
+                <Rule>
+                  <span>Approved permission hash</span>
+                  <strong className="mono hash-full">
+                    {installation.companyTerms.permissionHash}
+                  </strong>
+                  {installation.companyTerms.permissionHash && (
+                    <CopyButton
+                      value={installation.companyTerms.permissionHash}
+                    />
+                  )}
+                </Rule>
+                {executions.map((entry, index) => (
+                  <Rule key={`proof-${index}`}>
+                    <span>
+                      {entry.outcome === "SUCCEEDED"
+                        ? "Allowed action"
+                        : "Rejected action"}
+                      {entry.generation !== undefined
+                        ? ` · gen ${entry.generation}`
+                        : ""}
+                    </span>
+                    <strong className="mono">
+                      {entry.transactionHash ? (
+                        <a
+                          href={`https://sepolia.etherscan.io/tx/${entry.transactionHash}`}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          {displayHash(entry.transactionHash)}
+                        </a>
+                      ) : (
+                        (entry.rejectionCode ?? "REJECTED")
+                      )}
+                    </strong>
+                  </Rule>
+                ))}
+                <Rule>
+                  <span>ENS identity</span>
+                  <strong className="mono">
+                    {ens?.binding.agentName ?? recorded?.ens?.agentName ?? "—"}
+                  </strong>
+                </Rule>
+                {(ens?.resolver ?? recorded?.ens?.resolver) && (
+                  <Rule>
+                    <span>Resolver</span>
+                    <a
+                      className="mono"
+                      href={`https://sepolia.etherscan.io/address/${ens?.resolver ?? recorded?.ens?.resolver}`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {displayAddress(
+                        ens?.resolver ?? recorded?.ens?.resolver ?? "",
+                      )}
+                    </a>
+                  </Rule>
+                )}
+                {!readOnly && (
+                  <div className="form-actions">
+                    <Button onClick={onStartNewRun}>Start another run</Button>
+                  </div>
+                )}
+              </div>
+            )}
           <div className="detail-actions">
-            {status === "ACTIVE" && (
+            {!readOnly && status === "ACTIVE" && (
               <>
                 <Button
                   onClick={() => onExecute("ALLOWED")}
                   disabled={!installation || executing !== undefined || loading}
                 >
                   {executing === "ALLOWED"
-                    ? "Waiting for Sepolia confirmation…"
+                    ? "Waiting for Sepolia confirmation — usually under a minute"
                     : "Run allowed action"}
                 </Button>
                 <Button
@@ -1388,29 +1675,72 @@ function AgentDetail({
                 </Button>
               </>
             )}
-            <Button
-              kind="secondary"
-              onClick={onUpdate}
-              disabled={!installation || status !== "ACTIVE"}
-            >
-              Review release update
-            </Button>
-            <Button
-              kind="danger"
-              onClick={onRevoke}
-              disabled={!installation || status !== "ACTIVE" || loading}
-            >
-              {loading ? "Revoking..." : "Revoke authority"}
-            </Button>
-            {status === "REVOKED" && (
+            {!readOnly && status === "ACTIVE" && (
+              <Button
+                kind="secondary"
+                onClick={onUpdate}
+                disabled={!installation || loading}
+              >
+                Request a broader release
+              </Button>
+            )}
+            {!readOnly &&
+              status === "ACTIVE" &&
+              (confirmingRevoke ? (
+                <div className="confirm-block">
+                  <p>
+                    <strong>Revoke is irreversible.</strong> The delegated
+                    signer is removed from the Privy wallet, the ENS status
+                    becomes revoked, and any later action by this agent fails. A
+                    new run would need a fresh approval.
+                  </p>
+                  <div className="confirm-actions">
+                    <Button
+                      kind="secondary"
+                      onClick={() => setConfirmingRevoke(false)}
+                      disabled={loading}
+                    >
+                      Keep authority
+                    </Button>
+                    <Button
+                      kind="danger"
+                      onClick={() => {
+                        setConfirmingRevoke(false);
+                        onRevoke();
+                      }}
+                      disabled={loading}
+                    >
+                      {loading
+                        ? "Removing signer and writing ENS revocation — usually 30–90 s"
+                        : "Yes, revoke authority"}
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <Button
+                  kind="danger"
+                  onClick={() => setConfirmingRevoke(true)}
+                  disabled={!installation || loading}
+                >
+                  {loading
+                    ? "Removing signer and writing ENS revocation — usually 30–90 s"
+                    : "Revoke authority"}
+                </Button>
+              ))}
+            {!readOnly && status === "REVOKED" && (
               <Button
                 onClick={() => onExecute("ALLOWED")}
                 disabled={!installation || executing !== undefined || loading}
               >
                 {executing === "ALLOWED"
-                  ? "Waiting for Sepolia confirmation…"
+                  ? "Waiting for runner refusal…"
                   : "Attempt allowed action after revoke"}
               </Button>
+            )}
+            {readOnly && (
+              <span className="observe-note">
+                Read-only view — this run belongs to another session.
+              </span>
             )}
           </div>
           {executions.length > 0 && (
@@ -1491,7 +1821,7 @@ function AgentDetail({
             Evidence is secondary to the decision. It remains available for the
             company record.
           </div>
-          <JudgeRail installation={installation} />
+          <JudgeRail installation={installation} onNavigate={onNavigate} />
         </aside>
       </div>
     </div>
@@ -1504,6 +1834,7 @@ function UpdateReview({
   diff,
   onRequest,
   onRejectUpdate,
+  onApprove,
   onBack,
   loading,
   error,
@@ -1513,9 +1844,10 @@ function UpdateReview({
   readonly diff?: InstallationResource["updateDiff"];
   readonly onRequest: (draft: DraftRelease, terms: CompanyRule[]) => void;
   readonly onRejectUpdate: () => void;
+  readonly onApprove: () => void;
   readonly onBack: () => void;
   readonly loading: boolean;
-  readonly error?: string;
+  readonly error?: DescribedError;
 }) {
   const [version, setVersion] = useState(
     `${Number.parseFloat(agent.releaseVersion) + 1 || "2.0.0"}`,
@@ -1683,15 +2015,20 @@ function UpdateReview({
             </Button>
           )}
           {diff && (
-            <Button
-              kind="secondary"
-              onClick={onRejectUpdate}
-              disabled={loading}
-            >
-              {loading
-                ? "Withdrawing..."
-                : "Reject update (keep current authority)"}
-            </Button>
+            <>
+              <Button onClick={onApprove} disabled={loading}>
+                {loading ? "Loading…" : "Continue to reauthorization"}
+              </Button>
+              <Button
+                kind="secondary"
+                onClick={onRejectUpdate}
+                disabled={loading}
+              >
+                {loading
+                  ? "Withdrawing..."
+                  : "Reject update (keep current authority)"}
+              </Button>
+            </>
           )}
           <Button kind="secondary" onClick={onBack}>
             Keep current authority
@@ -1769,11 +2106,26 @@ function StatusText({ status }: { readonly status: string }) {
   );
 }
 
-function InlineError({ message }: { readonly message: string }) {
+function InlineError({
+  message,
+  onRetry,
+}: {
+  readonly message: DescribedError;
+  readonly onRetry?: () => void;
+}) {
   return (
     <div className="inline-error" role="alert">
       <span className="note-mark">!</span>
-      <span>{message}</span>
+      <div className="inline-error-body">
+        <strong>{message.title}</strong>
+        <span>{message.detail}</span>
+        <span className="inline-error-recovery">{message.recovery}</span>
+      </div>
+      {onRetry && (
+        <button className="text-link" type="button" onClick={onRetry}>
+          Retry
+        </button>
+      )}
     </div>
   );
 }
@@ -1801,7 +2153,94 @@ export default function App() {
   const [terms, setTerms] = useState<CompanyRule[]>(DEFAULT_TERMS);
   const [permissionHash, setPermissionHash] = useState<string>();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string>();
+  const [error, setError] = useState<DescribedError>();
+  const [pending, setPending] = useState<PendingWatch>();
+  const [loadFailed, setLoadFailed] = useState(false);
+  const watchingRef = useRef<string | undefined>(undefined);
+
+  const safeStateNote = useCallback(
+    (kind: PendingWatch["kind"], installation?: InstallationResource) => {
+      if (kind === "activation" || kind === "reauthorization") {
+        return installation?.status === "AWAITING_APPROVAL" ||
+          installation?.status === "UPDATE_AVAILABLE"
+          ? "No new authority was granted — the previous boundary remains in force. You can retry the approval."
+          : "The previous authority remains in force until the new one activates. Check the run state, then retry.";
+      }
+      if (kind === "revocation") {
+        return "The run is not revoked yet; the existing authority stays unchanged until revocation completes.";
+      }
+      return "No new evidence was recorded. Check the run state and retry the action.";
+    },
+    [],
+  );
+
+  const watchForOutcome = useCallback(
+    async (
+      kind: PendingWatch["kind"],
+      installationId: string,
+      until: (installation: InstallationResource) => boolean,
+      seed: InstallationResource | undefined,
+      onDone?: (next: InstallationResource) => void,
+    ) => {
+      watchingRef.current = `${kind}:${installationId}`;
+      setPending({
+        kind,
+        installationId,
+        attempt: 0,
+        elapsedSeconds: 0,
+      });
+      setAnnounce(`Checking the ${kind} result…`);
+      try {
+        const next = await api.waitForInstallation(
+          ORGANIZATION_ID,
+          installationId,
+          seed,
+          {
+            until,
+            onProgress: (progress) =>
+              setPending((current) =>
+                current
+                  ? {
+                      ...current,
+                      attempt: progress.attempt,
+                      elapsedSeconds: progress.elapsedSeconds,
+                    }
+                  : current,
+              ),
+          },
+        );
+        setWorkspace((current) =>
+          current.installation?.id === next.id ||
+          current.installation === undefined
+            ? {
+                ...current,
+                agent: next.agent,
+                installation: next,
+                source: "api",
+              }
+            : current,
+        );
+        if (until(next)) {
+          setAnnounce(`The ${kind} finished.`);
+          onDone?.(next);
+        } else {
+          setError({
+            title: "Still waiting",
+            detail: `The ${kind} did not reach its final state within five minutes.`,
+            recovery: safeStateNote(kind, next),
+            retryable: true,
+          });
+          setAnnounce(`The ${kind} is still in progress.`);
+        }
+      } catch (caught) {
+        setError(getErrorMessage(caught));
+      } finally {
+        setPending(undefined);
+        watchingRef.current = undefined;
+      }
+    },
+    [api, safeStateNote],
+  );
 
   const loadWorkspace = useCallback(async () => {
     const [organization, wallet, proof] = await Promise.all([
@@ -1811,17 +2250,22 @@ export default function App() {
     ]);
     let installation: InstallationResource | undefined;
     let installationSource: Workspace["installationSource"] = "none";
+    let installationLoadFailed = false;
     const stored = window.localStorage.getItem(SESSION_STORAGE_KEY);
     if (stored) {
       installation = await api
         .installation(ORGANIZATION_ID, stored)
-        .catch(() => undefined);
+        .catch(() => {
+          installationLoadFailed = true;
+          return undefined;
+        });
       if (installation) installationSource = "session";
     }
     if (!installation) {
-      const list = await api
-        .installations(ORGANIZATION_ID, 5)
-        .catch(() => undefined);
+      const list = await api.installations(ORGANIZATION_ID, 5).catch(() => {
+        installationLoadFailed = true;
+        return undefined;
+      });
       const latest = list?.[0];
       if (latest) {
         installation =
@@ -1834,9 +2278,13 @@ export default function App() {
     if (!installation) {
       installation = await api
         .installation(ORGANIZATION_ID, INSTALLATION_ID)
-        .catch(() => undefined);
+        .catch(() => {
+          installationLoadFailed = true;
+          return undefined;
+        });
       if (installation) installationSource = "observe";
     }
+    setLoadFailed(installationLoadFailed && installation === undefined);
     const agent =
       installation?.agent ??
       (await api
@@ -1856,7 +2304,34 @@ export default function App() {
       setTerms([...installation.companyTerms.companyTerms.authority.rules]);
       setPermissionHash(installation.companyTerms.permissionHash);
     }
-  }, [api]);
+    // A stored session can return mid-operation — resume watching instead
+    // of leaving the user on a frozen intermediate state.
+    if (installation && watchingRef.current === undefined) {
+      const id = installation.id;
+      if (installation.status === "CONFIGURING_AUTHORITY") {
+        void watchForOutcome(
+          "activation",
+          id,
+          (next) => next.status === "ACTIVE",
+          installation,
+        );
+      } else if (installation.status === "AWAITING_REAUTHORIZATION") {
+        void watchForOutcome(
+          "reauthorization",
+          id,
+          (next) => next.status === "ACTIVE",
+          installation,
+        );
+      } else if (installation.status === "REVOKING") {
+        void watchForOutcome(
+          "revocation",
+          id,
+          (next) => next.status === "REVOKED",
+          installation,
+        );
+      }
+    }
+  }, [api, watchForOutcome]);
 
   const connect = useCallback(async () => {
     const deadline = Date.now() + 240_000;
@@ -1985,11 +2460,35 @@ export default function App() {
         nextInstallationId,
         decision,
       );
+      window.localStorage.setItem(SESSION_STORAGE_KEY, submitted.id);
+      setWorkspace((current) => ({
+        ...current,
+        agent: submitted.agent,
+        installation: submitted,
+        source: "api",
+        installationSource: "session",
+      }));
+      const isActive = (next: InstallationResource) => next.status === "ACTIVE";
+      if (isActive(submitted)) {
+        setScreen("detail");
+        return;
+      }
       const next = await api.waitForInstallation(
         ORGANIZATION_ID,
         nextInstallationId,
         submitted,
+        {
+          until: isActive,
+          onProgress: (progress) =>
+            setPending({
+              kind: action === "REAUTHORIZE" ? "reauthorization" : "activation",
+              installationId: nextInstallationId,
+              attempt: progress.attempt,
+              elapsedSeconds: progress.elapsedSeconds,
+            }),
+        },
       );
+      setPending(undefined);
       setWorkspace((current) => ({
         ...current,
         agent: next.agent,
@@ -2000,14 +2499,31 @@ export default function App() {
       if (next.companyTerms.permissionHash)
         setPermissionHash(next.companyTerms.permissionHash);
       if (next.status !== "ACTIVE") {
-        setError(
-          "Authority configuration did not reach ACTIVE. The installation remains fail-closed for review.",
-        );
+        setError({
+          title: "Activation did not finish",
+          detail: `The installation is ${formatStatus(next.status)} instead of active.`,
+          recovery:
+            "No new authority was granted — the run remains fail-closed. You can retry the approval.",
+          retryable: true,
+        });
         return;
       }
       setScreen("detail");
     } catch (caught) {
-      setError(getErrorMessage(caught));
+      setPending(undefined);
+      if (isTransientError(caught)) {
+        // The server keeps working after the browser gives up — switch to
+        // watching the installation instead of presenting a dead end.
+        setScreen("detail");
+        void watchForOutcome(
+          action === "REAUTHORIZE" ? "reauthorization" : "activation",
+          nextInstallationId,
+          (next) => next.status === "ACTIVE",
+          workspace.installation,
+        );
+      } else {
+        setError(getErrorMessage(caught));
+      }
     } finally {
       setLoading(false);
     }
@@ -2019,6 +2535,7 @@ export default function App() {
     setExecuting(scenario);
     setError(undefined);
     setAnnounce("Waiting for Sepolia confirmation…");
+    const evidenceCount = installation.evidence.length;
     try {
       const next = await api.execute(
         ORGANIZATION_ID,
@@ -2036,8 +2553,27 @@ export default function App() {
         `Execution ${outcome}${latest?.rejectionCode ? `: ${String(latest.rejectionCode)}` : ""}`,
       );
     } catch (caught) {
-      setError(getErrorMessage(caught));
-      setAnnounce("Execution request failed");
+      if (isTransientError(caught)) {
+        void watchForOutcome(
+          "execution",
+          installation.id,
+          (next) => next.evidence.length > evidenceCount,
+          installation,
+          (next) => {
+            const latest = next.evidence.at(-1)?.evidence;
+            const outcome = String(latest?.outcome ?? "recorded").toLowerCase();
+            setAnnounce(
+              `Execution ${outcome}${latest?.rejectionCode ? `: ${String(latest.rejectionCode)}` : ""}`,
+            );
+          },
+        );
+        setAnnounce(
+          "The request timed out — checking whether the server recorded the execution…",
+        );
+      } else {
+        setError(getErrorMessage(caught));
+        setAnnounce("Execution request failed");
+      }
     } finally {
       setExecuting(undefined);
     }
@@ -2129,8 +2665,27 @@ export default function App() {
         installation: next,
         source: "api",
       }));
+      if (next.status === "REVOKING") {
+        void watchForOutcome(
+          "revocation",
+          next.id,
+          (later) => later.status === "REVOKED",
+          next,
+        );
+      } else if (next.status === "REVOKED") {
+        setAnnounce("Authority revoked — the delegated signer is removed.");
+      }
     } catch (caught) {
-      setError(getErrorMessage(caught));
+      if (isTransientError(caught)) {
+        void watchForOutcome(
+          "revocation",
+          installation.id,
+          (next) => next.status === "REVOKED",
+          installation,
+        );
+      } else {
+        setError(getErrorMessage(caught));
+      }
     } finally {
       setLoading(false);
     }
@@ -2139,6 +2694,23 @@ export default function App() {
   if (screen === "landing")
     return <LandingPage onEnter={() => setScreen("agents")} />;
   const installation = workspace.installation;
+  const liveSession = statusInfo?.demo.liveSession ?? null;
+  const liveSessionBusy =
+    liveSession !== null && liveSession.installationId !== installation?.id;
+  const readOnly = workspace.installationSource === "observe";
+  const step = nextStepFor({
+    installation,
+    installationSource: workspace.installationSource,
+    liveSession,
+    connected: connection.state === "connected",
+  });
+  const startNewRun = () => {
+    window.localStorage.removeItem(SESSION_STORAGE_KEY);
+    setError(undefined);
+    setDraftRelease(undefined);
+    void loadWorkspace();
+    setScreen("add");
+  };
   const currentAgent = installation?.agent ?? draftAgent ?? workspace.agent;
   const reauthorizationPending =
     installation?.status === "AWAITING_REAUTHORIZATION" ||
@@ -2169,6 +2741,9 @@ export default function App() {
       {screen === "agents" && (
         <Registry
           workspace={workspace}
+          step={step}
+          liveSessionBusy={liveSessionBusy}
+          loadFailed={loadFailed}
           onAdd={() => {
             setError(undefined);
             setScreen("add");
@@ -2177,6 +2752,11 @@ export default function App() {
             setError(undefined);
             setScreen("detail");
           }}
+          onNavigate={(next) => {
+            setError(undefined);
+            setScreen(next);
+          }}
+          onRetryLoad={() => void loadWorkspace()}
         />
       )}
       {screen === "add" && (
@@ -2204,6 +2784,8 @@ export default function App() {
           terms={reviewTerms}
           permissionHash={reviewPermissionHash}
           action={reauthorizationPending ? "REAUTHORIZE" : "APPROVE"}
+          installation={installation}
+          pending={pending}
           onApprove={() =>
             void handleApproval(
               reauthorizationPending ? "REAUTHORIZE" : "APPROVE",
@@ -2227,10 +2809,18 @@ export default function App() {
         <AgentDetail
           workspace={workspace}
           executing={executing}
+          step={step}
+          pending={pending}
+          readOnly={readOnly}
           onExecute={(scenario) => void handleExecute(scenario)}
           onUpdate={() => setScreen("update")}
           onRevoke={() => void handleRevoke()}
           onBack={() => setScreen("agents")}
+          onNavigate={(next) => {
+            setError(undefined);
+            setScreen(next);
+          }}
+          onStartNewRun={startNewRun}
           loading={loading}
           error={error}
         />
@@ -2242,6 +2832,10 @@ export default function App() {
           diff={installation?.updateDiff}
           onRequest={handlePrepareUpdate}
           onRejectUpdate={() => void handleRejectUpdate()}
+          onApprove={() => {
+            setError(undefined);
+            setScreen("review");
+          }}
           onBack={() => setScreen("detail")}
           loading={loading}
           error={error}

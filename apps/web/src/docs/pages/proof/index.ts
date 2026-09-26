@@ -90,7 +90,7 @@ const liveDeployment: DocPageContent = {
               },
             },
           ],
-          ["Runner release label and execution readiness."],
+          ["Runner release label and database connectivity."],
         ],
       ],
     },

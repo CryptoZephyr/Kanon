@@ -36,7 +36,7 @@ The suite covers manifest hashing, permission normalization and diffing, the met
 - The hosted demo shares one wallet, signer and ENS name, so one session holds authority at a time.
 - In-memory rate limits reset when the API restarts.
 - ENSv2 on Sepolia is beta.
-- Render free services sleep when idle; keep-warm runs until 2026-10-03.
+- Render free services sleep when idle; a scheduled GitHub keep-warm (configured every 10 minutes until 2026-10-03) runs on a best-effort basis — observed only every few hours — so the first request after idle can still take up to a minute.
 
 ## Future work
 

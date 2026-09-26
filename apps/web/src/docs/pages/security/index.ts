@@ -37,8 +37,13 @@ const trustModel: DocPageContent = {
         ],
         [
           ["Demo token"],
-          ["Vercel proxy only"],
+          ["Vercel proxy (sends it) and API (verifies it)"],
           ["Hosted-demo role; injected server-side."],
+        ],
+        [
+          ["Privy app secret"],
+          ["API and runner"],
+          ["Authenticates calls to Privy's API."],
         ],
       ],
     },
@@ -131,10 +136,12 @@ const replayProtection: DocPageContent = {
           " — each grant advances the generation (grant 0, reauthorization 1, revocation 2). The runner refuses stale generations before executing.",
         ],
         [
-          { code: "Idempotency keys" },
-          " — API writes accept ",
-          { code: "Idempotency-Key" },
-          " headers so a retried request cannot double-apply.",
+          { code: "Provider idempotency" },
+          " — Privy policy creation and delegated signing requests are sent with a fresh idempotency key (packages/privy control-plane, runner), so a retried provider call is not applied twice.",
+        ],
+        [
+          { code: "Status checks" },
+          " — approval and revoke decisions are rejected with 409 CONFLICT when the installation is not in the expected status, so replaying an old decision against a later state fails.",
         ],
         [
           { code: "Runner staleness checks" },
@@ -187,7 +194,7 @@ const recovery: DocPageContent = {
     {
       t: "p",
       text: [
-        "A row that can no longer go through normal revocation — for example, authority removed off-band — is retired only after the API verifies the wallet has zero delegated signers. It is then recorded as retired, not as a revoked installation with proof it never produced.",
+        "A row that can no longer go through normal revocation — for example, a session stuck mid-configuration, or one whose normal revocation fails because on-chain state no longer matches the record — is retired only after the API verifies the wallet has zero delegated signers. It is then recorded as retired, not as a revoked installation with proof it never produced.",
       ],
     },
   ],
@@ -208,7 +215,7 @@ const demoControls: DocPageContent = {
       t: "list",
       items: [
         [
-          "Proxy allowlist — the Vercel proxy forwards only the read, publish, terms, decision, revoke, executions and operator-proof routes; everything else returns 403.",
+          "Proxy allowlist — the Vercel proxy forwards only reads (including the read-only proof records), release publishing, company terms, approval and reauthorization, reject-update, executions and revoke; everything else returns 403 before reaching the API.",
         ],
         [
           "Secret-header stripping — visitor-supplied company tokens, demo tokens and runner secrets are removed before forwarding.",
@@ -222,8 +229,12 @@ const demoControls: DocPageContent = {
         [
           "Session lease — one shared fixture, 20-minute TTL, expired through real revocation.",
         ],
-        ["Rate limits — in-memory per-IP caps on the mutating routes."],
-        ["Shared state — the public Postgres stores no secrets."],
+        [
+          "Rate limits — in-memory limits per client IP and globally on mutations and executions; they reset when the API restarts.",
+        ],
+        [
+          "Shared state — the database stores installation records and evidence only — no provider credentials.",
+        ],
       ],
     },
     {
@@ -231,7 +242,7 @@ const demoControls: DocPageContent = {
       kind: "warning",
       title: "One operator credential, one boundary",
       text: [
-        "The operator token exists only in Render env vars and operator machines. It cannot be reached through the public proxy path — the proxy strips the header rather than forwarding it.",
+        "The operator token exists only in the API service's Render environment. It is not configured on Vercel, and the proxy strips any visitor-supplied copy.",
       ],
     },
   ],

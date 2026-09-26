@@ -233,9 +233,9 @@ const lifecycle: DocPageContent = {
     {
       t: "p",
       text: [
-        "The owner removes the delegated signer, the API confirms zero signers, checks that the runner refuses the old authority, then writes ",
+        "The API, using the company's owner credential, removes the delegated signer, confirms zero signers, checks that the runner refuses the old authority, then writes ",
         { code: "kanon.status = revoked" },
-        ". The ENS name is kept for history. A row that cannot be revoked normally (for example, authority removed off-band) is retired through ",
+        ". The ENS name is kept for history. A row that cannot be revoked normally (for example, a session stuck mid-configuration, or one whose revocation fails because on-chain state no longer matches the record) is retired through ",
         { code: "authority_retired" },
         " — it becomes REVOKED only after Privy reports zero signers, and records a retirement note rather than a fabricated revocation proof.",
       ],

@@ -216,7 +216,7 @@ const howItWorks: DocPageContent = {
       kind: "boundary",
       title: "Enforcement vs evidence",
       text: [
-        "Privy enforces financial authority on-chain. ENS records are identity evidence — they describe approved state but never grant or revoke wallet permission. Kanon writes ENS only after the matching Privy change succeeds.",
+        "Privy enforces financial authority when it evaluates the delegated signer's policy at signing time. ENS records are identity evidence — they describe approved state but never grant or revoke wallet permission. Kanon writes ENS only after the matching Privy change succeeds.",
       ],
     },
   ],

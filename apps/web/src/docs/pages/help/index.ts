@@ -22,7 +22,7 @@ const troubleshooting: DocPageContent = {
     {
       t: "kv",
       rows: [
-        ["What you see", ["Waking the hosted demo… for up to a minute"]],
+        ["What you see", ["Waking hosted backend… attempt N"]],
         [
           "Why",
           [
@@ -52,8 +52,8 @@ const troubleshooting: DocPageContent = {
         [
           "RATE_LIMITED",
           "429",
-          "Too many requests to a mutating route from this network.",
-          "Wait for the window shown in the response and retry once.",
+          "Too many demo requests from this client or across the demo.",
+          "Wait a few minutes and retry.",
         ],
         [
           "DEMO_TERMS_OUT_OF_BOUNDS",
@@ -62,9 +62,9 @@ const troubleshooting: DocPageContent = {
           "Fix the named field: recipient must be the control wallet, ceilings 1–1000 wei, window 60–86400 s, no calldata or validity fields.",
         ],
         [
-          "UPSTREAM_TIMEOUT / UPSTREAM_FAILED",
+          "UPSTREAM_TIMEOUT / UPSTREAM_FAILED / UPSTREAM_REQUEST_FAILED",
           "504 / 502",
-          "The proxy reached for the API but the call timed out or failed — usually a cold start.",
+          "The proxy timed out waiting for the API, or the API could not reach the runner — usually a cold start.",
           "Retry. The server keeps any work it already started; the workspace re-reads real state rather than guessing.",
         ],
         [
@@ -111,7 +111,7 @@ const troubleshooting: DocPageContent = {
         ],
         [
           "RUNNER_REFUSED_STALE_OR_REVOKED",
-          "409",
+          "execution evidence (409 from the runner)",
           "The isolated runner refused stale, revoked or mismatched authority before signing.",
           "Expected after revocation or reauthorization — the refusal is the proof, not an error to fix.",
         ],

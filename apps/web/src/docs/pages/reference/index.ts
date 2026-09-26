@@ -326,7 +326,7 @@ const deployment: DocPageContent = {
       kind: "note",
       title: "Free tier",
       text: [
-        "Render free services sleep after about 15 minutes idle. A scheduled keep-warm workflow pings the proxy status endpoint and the runner every 10 minutes until 2026-10-03.",
+        "Render free services sleep after about 15 minutes idle. A scheduled GitHub workflow requests the proxy status endpoint and the runner (configured every 10 minutes until 2026-10-03). GitHub runs schedules on a best-effort basis and has run it only every few hours, so the first request after idle can still take up to a minute.",
       ],
     },
   ],
@@ -356,7 +356,7 @@ const limitations: DocPageContent = {
         ["In-memory rate limits reset when the API restarts."],
         ["ENSv2 contracts on Sepolia are beta and may change before mainnet."],
         [
-          "Render free services sleep when idle; keep-warm runs until 2026-10-03.",
+          "Render free services sleep when idle; a scheduled GitHub keep-warm runs on a best-effort basis (observed only every few hours) until 2026-10-03, so the first request after idle can still take up to a minute.",
         ],
       ],
     },

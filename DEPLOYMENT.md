@@ -36,7 +36,7 @@ The company API token was removed from Vercel in this release. Visitor requests 
 - Start-up now takes about 19 seconds from process start to listening, down from about 30 seconds, because the start command no longer downloads pnpm through corepack on every boot.
 - Vercel production deployment aliased to `https://kanon-agents.vercel.app` with `KANON_DEMO_API_TOKEN` set and `KANON_COMPANY_API_TOKEN` removed.
 - Demo wallet top-up of 0.02 Sepolia ETH from the organization control wallet: [`0x04cbf622…ea13`](https://sepolia.etherscan.io/tx/0x04cbf622f117f1f57e05e9991fb31740afb8c80d57f9c5295958d434eaf8ea13).
-- `.github/workflows/keep-warm.yml` pings the proxy status endpoint and the runner every 10 minutes until 2026-10-03.
+- `.github/workflows/keep-warm.yml` requests the proxy status endpoint and the runner (configured every 10 minutes until 2026-10-03). GitHub runs schedules on a best-effort basis and has run it only every few hours, so the first request after idle can still take up to a minute.
 
 ### Live checks
 
@@ -55,7 +55,7 @@ Both runs produced a confirmed allowed Sepolia transaction, a `PRIVY_POLICY_REJE
 
 ## Operating notes
 
-- Render free services sleep after about 15 minutes idle. The frontend retries automatically and the keep-warm workflow reduces cold starts.
+- Render free services sleep after about 15 minutes idle. The frontend retries automatically; the scheduled keep-warm reduces cold starts but runs only every few hours in practice, so a first request after idle can still take up to a minute.
 - Only one session can hold the shared signer and ENS name. Idle sessions expire after 20 minutes (`KANON_DEMO_LEASE_TTL_SECONDS` overrides this).
 - The operator lifecycle proof (`POST /v1/proof/run`, company token only) now writes its own ENS baseline after Privy authority is attached, so it no longer needs a manual fixture reset.
 - Keep all ENS writes inside the Sepolia namespace above. No mainnet write is authorized.

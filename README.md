@@ -138,7 +138,7 @@ Details and reporting instructions: [SECURITY.md](SECURITY.md).
 - The hosted demo shares one wallet, signer and ENS name, so only one session can hold authority at a time.
 - ENSv2 contracts on Sepolia are beta and may change before mainnet.
 - The ENS namespace `kanon-ethonline-2026.eth` was registered during the original build and is reused unchanged so the verified records and permissions stay valid.
-- Render free services sleep when idle. A scheduled workflow keeps them warm until 2026-10-03.
+- Render free services sleep when idle. A scheduled GitHub workflow requests the proxy status endpoint and the runner (configured every 10 minutes until 2026-10-03), but GitHub runs schedules on a best-effort basis and has run it only every few hours — the first request after idle can still take up to a minute.
 
 ## Project history
 

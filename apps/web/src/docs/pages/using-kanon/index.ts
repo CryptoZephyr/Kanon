@@ -202,9 +202,9 @@ const approveAuthority: DocPageContent = {
     {
       t: "callout",
       kind: "note",
-      title: "Usually 30–60 seconds",
+      title: "Usually about a minute",
       text: [
-        "Activation talks to Privy and Sepolia. If the browser request ends early, the server keeps working — the workspace switches to watching the installation and reports the real outcome.",
+        "Activation talks to Privy and Sepolia — about 74 seconds in the measured public run. If the browser request ends early, the server keeps working — the workspace switches to watching the installation and reports the real outcome.",
       ],
     },
     {
@@ -300,14 +300,30 @@ const updateReauthorize: DocPageContent = {
       columns: ["Classification", "Meaning", "Human review"],
       rows: [
         [[{ code: "NO_CHANGE" }], ["Identical normalized terms."], ["No"]],
-        [[{ code: "NARROWER" }], ["Every bound tighter or equal."], ["No"]],
-        [[{ code: "EXPANDED" }], ["Any bound loosened."], ["Yes"]],
         [
-          [{ code: "SUBSTITUTED" }],
-          ["Recipient, chain or asset changed."],
+          [{ code: "NARROWER" }],
+          [
+            "Proven tighter: every bound equal or tighter, at least one tighter.",
+          ],
+          ["No"],
+        ],
+        [
+          [{ code: "EXPANDED" }],
+          ["Proven broader: a bound loosened or a rule added."],
           ["Yes"],
         ],
-        [[{ code: "UNKNOWN" }], ["Cannot be proven either way."], ["Yes"]],
+        [
+          [{ code: "SUBSTITUTED" }],
+          [
+            "Same rule count and limits, but a scope field (recipient, chain, calldata or validity window) changed.",
+          ],
+          ["Yes"],
+        ],
+        [
+          [{ code: "UNKNOWN" }],
+          ["The relationship cannot be proven, so it fails closed."],
+          ["Yes"],
+        ],
       ],
     },
     {
@@ -357,9 +373,11 @@ const revoke: DocPageContent = {
       ordered: true,
       items: [
         [
-          "The owner removes the delegated signer and the API confirms zero signers on the wallet.",
+          "The API removes the delegated signer with the owner credential and confirms zero signers on the wallet.",
         ],
-        ["A post-revoke delegated request is attempted and must fail."],
+        [
+          "The runner is asked to execute with the old authority and must refuse it.",
+        ],
         [
           "Only then is the ENS ",
           { code: "kanon.status" },
@@ -372,7 +390,7 @@ const revoke: DocPageContent = {
     {
       t: "p",
       text: [
-        "Writing ENS last keeps the evidence honest: the revoked status is published after authority is actually gone, never before. The operation typically takes 30–90 seconds because it waits for a Sepolia transaction receipt.",
+        "Writing ENS last keeps the evidence honest: the revoked status is published after authority is actually gone, never before. The operation typically takes 15–60 seconds because it waits for a Sepolia transaction receipt.",
       ],
     },
     {
@@ -492,7 +510,7 @@ const recovery: DocPageContent = {
     {
       t: "p",
       text: [
-        "Rows whose delegated authority was already removed off-band are retired only after the API verifies the wallet has zero signers — reported as ",
+        "Rows that can no longer be revoked normally — for example, a session stuck mid-configuration, or one whose revocation fails because on-chain state no longer matches the record — are retired only after the API verifies the wallet has zero signers — reported as ",
         { code: "Retired by session expiry" },
         ", never presented as a completed revocation.",
       ],

@@ -370,7 +370,13 @@ async function main() {
       waitUntil: "domcontentloaded",
     });
     await clickButton(page4, "Docs menu");
-    await waitForText(page4, "Using Kanon");
+    // Two "Using Kanon" headings exist — the desktop sidebar stays hidden at
+    // 390px; assert on the copy inside the opened mobile panel.
+    await page4
+      .locator(".docs-mobile-panel")
+      .getByText("Using Kanon")
+      .first()
+      .waitFor({ state: "visible", timeout: GENEROUS });
     await shot(page4, "docs-mobile");
     return "mobile nav opens";
   });
